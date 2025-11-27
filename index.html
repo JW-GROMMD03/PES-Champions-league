@@ -2201,32 +2201,30 @@
             updateTournamentProgress();
         }
         
-        // Schedule Champions League fixtures
-        function scheduleChampionsLeagueFixtures() {
-            const today = new Date();
-            
-            // Group stage has 6 matchdays
-            for (let md = 1; md <= 6; md++) {
-                const matchdayFixtures = championsLeague.fixtures.filter(f => 
-                    f.stage === 'group' && 
-                    ((md <= 3 && f.matchday === md) || (md > 3 && f.matchday === md - 3))
-                );
-                
-                // Set dates for this matchday - alternating between today and tomorrow
-                const isToday = md % 2 === 1;
-                const fixtureDate = new Date(today.getTime() + ((md - 1) * 24 * 60 * 60 * 1000)); // Every day
-                
-                if (!isToday) {
-                    fixtureDate.setDate(fixtureDate.getDate() + 1); // Tomorrow
-                }
-                
-                // Set dates for this matchday
-                matchdayFixtures.forEach(fixture => {
-                    fixture.date = new Date(fixtureDate);
-                    fixture.matchday = md;
-                });
-            }
-        }
+  
+// Schedule Champions League fixtures
+function scheduleChampionsLeagueFixtures() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of today
+    
+    // Group stage has 6 matchdays
+    for (let md = 1; md <= 6; md++) {
+        const matchdayFixtures = championsLeague.fixtures.filter(f => 
+            f.stage === 'group' && 
+            ((md <= 3 && f.matchday === md) || (md > 3 && f.matchday === md - 3))
+        );
+        
+        // Set dates for this matchday - starting today for matchday 1
+        const fixtureDate = new Date(today);
+        fixtureDate.setDate(today.getDate() + (md - 1)); // Add days based on matchday
+        
+        // Set dates for this matchday
+        matchdayFixtures.forEach(fixture => {
+            fixture.date = new Date(fixtureDate);
+            fixture.matchday = md;
+        });
+    }
+}
         
         // Render Champions League fixtures
         function renderChampionsLeagueFixtures() {
@@ -3748,3 +3746,4 @@
     </script>
 </body>
 </html>
+
