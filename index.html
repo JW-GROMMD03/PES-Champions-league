@@ -424,6 +424,100 @@
             font-weight: bold;
         }
         
+        /* New styles for tournament progress */
+        .tournament-progress {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 5px solid var(--gold);
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--gold);
+            transition: width 0.5s ease;
+        }
+        
+        .progress-dates {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .final-rankings {
+            margin-top: 20px;
+        }
+        
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+        
+        .ranking-position {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        
+        .position-1 {
+            background: var(--gold);
+            color: var(--dark);
+        }
+        
+        .position-2 {
+            background: var(--silver);
+            color: var(--dark);
+        }
+        
+        .position-3 {
+            background: var(--bronze);
+            color: var(--dark);
+        }
+        
+        .position-4 {
+            background: var(--gray);
+            color: var(--light);
+        }
+        
+        .ranking-team {
+            flex: 1;
+        }
+        
+        .ranking-stars {
+            color: var(--gold);
+            margin-left: 10px;
+        }
+        
+        .champion-name {
+            font-weight: bold;
+            color: var(--gold);
+        }
+        
+        .champion-stars {
+            color: var(--gold);
+            margin-left: 5px;
+        }
+        
         /* Registration Form Styles */
         .registration-options {
             display: flex;
@@ -1409,6 +1503,16 @@
         <div class="tab-content" id="fixtures">
             <div class="card champions-league-card">
                 <h2 class="card-title champions-league-title">Champions League Fixtures</h2>
+                <div class="tournament-progress">
+                    <h3>Tournament Progress</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="tournament-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-dates">
+                        <span id="start-date">Day 1: Today</span>
+                        <span id="end-date">Day 7: Final</span>
+                    </div>
+                </div>
                 <div class="champions-matchday-selector">
                     <label for="champions-matchday-select">Select Matchday:</label>
                     <select id="champions-matchday-select">
@@ -1565,6 +1669,15 @@
                         </div>
                     </div>
                     
+                    <div class="final-rankings" id="final-rankings">
+                        <h3>Final Rankings</h3>
+                        <div class="empty-state">
+                            <i class="fas fa-list-ol"></i>
+                            <h3>No Final Rankings</h3>
+                            <p>Complete a tournament to see final rankings</p>
+                        </div>
+                    </div>
+                    
                     <div class="team-history" id="team-history">
                         <h3>Team Championship History</h3>
                         <div class="empty-state">
@@ -1603,7 +1716,10 @@
             currentStage: 'group',
             championsHistory: [],
             currentMatchday: 1,
-            season: 1
+            season: 1,
+            tournamentStartDate: null,
+            tournamentEndDate: null,
+            finalRankings: []
         };
         
         // DOM Elements
@@ -1624,6 +1740,10 @@
         const predictionArchive = document.getElementById('prediction-archive');
         const trophyCase = document.getElementById('trophy-case');
         const teamHistoryContainer = document.getElementById('team-history');
+        const finalRankingsContainer = document.getElementById('final-rankings');
+        const tournamentProgressFill = document.getElementById('tournament-progress-fill');
+        const startDateSpan = document.getElementById('start-date');
+        const endDateSpan = document.getElementById('end-date');
         const notification = document.getElementById('notification');
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -1654,6 +1774,7 @@
                 renderChampionsLeagueFixtures();
                 renderChampionsResultsInput();
                 renderChampionsMatchHistory();
+                updateTournamentProgress();
             }
             
             if (championsLeague.knockout.length > 0) {
@@ -1859,7 +1980,10 @@
                     currentStage: 'group',
                     championsHistory: [],
                     currentMatchday: 1,
-                    season: 1
+                    season: 1,
+                    tournamentStartDate: null,
+                    tournamentEndDate: null,
+                    finalRankings: []
                 };
                 saveData();
                 renderTeams();
@@ -1869,6 +1993,7 @@
                 renderChampionsMatchHistory();
                 renderChampionsLeagueKnockout();
                 renderChampionsLeagueHistory();
+                updateTournamentProgress();
                 showNotification('All teams, groups, and fixtures cleared!');
             }
         });
@@ -1895,6 +2020,12 @@
             championsLeague.fixtures = [];
             championsLeague.currentStage = 'group';
             championsLeague.currentMatchday = 1;
+            
+            // Set tournament dates (one week from today)
+            const today = new Date();
+            championsLeague.tournamentStartDate = new Date(today);
+            championsLeague.tournamentEndDate = new Date(today);
+            championsLeague.tournamentEndDate.setDate(today.getDate() + 6); // 7 days total
             
             // Shuffle teams randomly
             const shuffledTeams = [...teams].sort(() => 0.5 - Math.random());
@@ -1925,6 +2056,7 @@
             }
             
             renderChampionsLeagueGroups();
+            updateTournamentProgress();
         }
         
         // Render Champions League groups
@@ -2066,6 +2198,7 @@
             
             renderChampionsLeagueFixtures();
             renderChampionsResultsInput();
+            updateTournamentProgress();
         }
         
         // Schedule Champions League fixtures
@@ -2307,6 +2440,7 @@
             renderChampionsLeagueFixtures();
             renderChampionsResultsInput();
             renderChampionsMatchHistory();
+            updateTournamentProgress();
             
             showNotification('Champions League result saved successfully!');
             
@@ -2504,6 +2638,7 @@
             renderChampionsLeagueFixtures();
             renderChampionsResultsInput();
             renderChampionsMatchHistory();
+            updateTournamentProgress();
             
             showNotification('Champions League result removed. You can now enter the correct result.', 'warning');
         }
@@ -2578,6 +2713,7 @@
             
             renderChampionsLeagueKnockout();
             renderChampionsLeagueFixtures();
+            updateTournamentProgress();
         }
         
         // Render Champions League knockout stage
@@ -2638,6 +2774,346 @@
             });
         }
         
+        // Simulate knockout stage
+        simulateKnockoutBtn.addEventListener('click', function() {
+            if (championsLeague.knockout.length === 0) {
+                showNotification('No knockout stage available. Complete group stage first!', 'danger');
+                return;
+            }
+            
+            simulateKnockoutStage();
+            saveData();
+            
+            showNotification('Knockout stage simulated!');
+        });
+        
+        // Simulate knockout stage
+        function simulateKnockoutStage() {
+            const semiFinalLosers = [];
+            
+            // Simulate each round
+            for (let i = 0; i < championsLeague.knockout.length; i++) {
+                const round = championsLeague.knockout[i];
+                
+                for (let j = 0; j < round.matches.length; j++) {
+                    const match = round.matches[j];
+                    
+                    if (!match.completed) {
+                        // Simulate the match
+                        const homeTeam = teams.find(t => t.id === match.homeTeam);
+                        const awayTeam = teams.find(t => t.id === match.awayTeam);
+                        
+                        if (!homeTeam || !awayTeam) continue;
+                        
+                        // Calculate probability based on team strength
+                        const homeStrength = homeTeam.strength;
+                        const awayStrength = awayTeam.strength;
+                        const totalStrength = homeStrength + awayStrength;
+                        
+                        const homeWinProbability = homeStrength / totalStrength;
+                        const awayWinProbability = awayStrength / totalStrength;
+                        const drawProbability = 0.2; // 20% chance of draw
+                        
+                        // Generate random result
+                        const random = Math.random();
+                        
+                        if (random < homeWinProbability) {
+                            // Home team wins
+                            match.homeScore = Math.floor(Math.random() * 4) + 1;
+                            match.awayScore = Math.floor(Math.random() * 3);
+                            match.winner = homeTeam;
+                            match.loser = awayTeam;
+                            match.reason = `${homeTeam.name} wins`;
+                        } else if (random < homeWinProbability + awayWinProbability) {
+                            // Away team wins
+                            match.homeScore = Math.floor(Math.random() * 3);
+                            match.awayScore = Math.floor(Math.random() * 4) + 1;
+                            match.winner = awayTeam;
+                            match.loser = homeTeam;
+                            match.reason = `${awayTeam.name} wins`;
+                        } else {
+                            // Draw - go to extra time or penalties
+                            match.homeScore = Math.floor(Math.random() * 2) + 1;
+                            match.awayScore = match.homeScore;
+                            
+                            // Extra time
+                            const extraTimeRandom = Math.random();
+                            if (extraTimeRandom < 0.5) {
+                                // One team wins in extra time
+                                match.extraTime = {
+                                    homeScore: match.homeScore + Math.floor(Math.random() * 2),
+                                    awayScore: match.awayScore + Math.floor(Math.random() * 2)
+                                };
+                                
+                                if (match.extraTime.homeScore > match.extraTime.awayScore) {
+                                    match.winner = homeTeam;
+                                    match.loser = awayTeam;
+                                    match.reason = `${homeTeam.name} wins after extra time`;
+                                } else {
+                                    match.winner = awayTeam;
+                                    match.loser = homeTeam;
+                                    match.reason = `${awayTeam.name} wins after extra time`;
+                                }
+                            } else {
+                                // Penalties
+                                match.penalties = {
+                                    homeScore: Math.floor(Math.random() * 5) + 3,
+                                    awayScore: Math.floor(Math.random() * 5) + 2
+                                };
+                                
+                                if (match.penalties.homeScore > match.penalties.awayScore) {
+                                    match.winner = homeTeam;
+                                    match.loser = awayTeam;
+                                    match.reason = `${homeTeam.name} wins on penalties`;
+                                } else {
+                                    match.winner = awayTeam;
+                                    match.loser = homeTeam;
+                                    match.reason = `${awayTeam.name} wins on penalties`;
+                                }
+                            }
+                        }
+                        
+                        match.completed = true;
+                        
+                        // Track semi-final losers for third-place playoff
+                        if (round.stage === 'Semi-finals') {
+                            semiFinalLosers.push(match.loser);
+                        }
+                    }
+                }
+                
+                // Generate next round if not the final
+                if (round.stage !== 'Final' && i === championsLeague.knockout.length - 1) {
+                    const nextRoundWinners = round.matches.map(match => match.winner);
+                    let nextRoundName = '';
+                    let nextMatchday = 0;
+                    
+                    if (round.stage === 'Round of 16') {
+                        nextRoundName = 'Quarter-finals';
+                        nextMatchday = 8;
+                    } else if (round.stage === 'Quarter-finals') {
+                        nextRoundName = 'Semi-finals';
+                        nextMatchday = 9;
+                    } else if (round.stage === 'Semi-finals') {
+                        nextRoundName = 'Final';
+                        nextMatchday = 10;
+                        
+                        // Also create third-place playoff
+                        const thirdPlaceMatch = {
+                            id: championsLeague.fixtures.length + 1,
+                            homeTeam: semiFinalLosers[0].id,
+                            awayTeam: semiFinalLosers[1].id,
+                            matchday: 10,
+                            date: new Date(Date.now() + (10 * 24 * 60 * 60 * 1000)),
+                            homeScore: null,
+                            awayScore: null,
+                            completed: false,
+                            stage: 'Third-place Playoff',
+                            homeTeamObj: semiFinalLosers[0],
+                            awayTeamObj: semiFinalLosers[1],
+                            extraTime: null,
+                            penalties: null,
+                            winner: null,
+                            loser: null,
+                            reason: ''
+                        };
+                        
+                        championsLeague.fixtures.push(thirdPlaceMatch);
+                        championsLeague.knockout.push({
+                            stage: 'Third-place Playoff',
+                            matches: [thirdPlaceMatch]
+                        });
+                    }
+                    
+                    if (nextRoundName && nextRoundName !== 'Final') {
+                        const nextRoundMatches = [];
+                        
+                        for (let k = 0; k < nextRoundWinners.length; k += 2) {
+                            const homeTeam = nextRoundWinners[k];
+                            const awayTeam = nextRoundWinners[k + 1];
+                            
+                            const fixture = {
+                                id: championsLeague.fixtures.length + 1,
+                                homeTeam: homeTeam.id,
+                                awayTeam: awayTeam.id,
+                                matchday: nextMatchday,
+                                date: new Date(Date.now() + (nextMatchday * 24 * 60 * 60 * 1000)),
+                                homeScore: null,
+                                awayScore: null,
+                                completed: false,
+                                stage: nextRoundName,
+                                homeTeamObj: homeTeam,
+                                awayTeamObj: awayTeam,
+                                extraTime: null,
+                                penalties: null,
+                                winner: null,
+                                loser: null,
+                                reason: ''
+                            };
+                            
+                            nextRoundMatches.push(fixture);
+                            championsLeague.fixtures.push(fixture);
+                        }
+                        
+                        championsLeague.knockout.push({
+                            stage: nextRoundName,
+                            matches: nextRoundMatches
+                        });
+                    }
+                }
+            }
+            
+            // Check if tournament is complete
+            checkTournamentCompletion();
+            
+            renderChampionsLeagueKnockout();
+            renderChampionsLeagueFixtures();
+            updateTournamentProgress();
+        }
+        
+        // Check if tournament is complete
+        function checkTournamentCompletion() {
+            const allFixturesCompleted = championsLeague.fixtures.every(f => f.completed);
+            
+            if (allFixturesCompleted) {
+                // Generate final rankings
+                generateFinalRankings();
+                
+                // Update team championship counts
+                const champion = championsLeague.championsHistory[championsLeague.championsHistory.length - 1].champion;
+                const championTeam = teams.find(t => t.name === champion);
+                if (championTeam) {
+                    championTeam.championships++;
+                }
+                
+                saveData();
+                renderChampionsLeagueHistory();
+                
+                showNotification('Tournament completed! Final rankings generated.', 'success');
+            }
+        }
+        
+        // Generate final rankings
+        function generateFinalRankings() {
+            championsLeague.finalRankings = [];
+            
+            // Get champion
+            const finalMatch = championsLeague.knockout.find(round => round.stage === 'Final').matches[0];
+            const champion = finalMatch.winner;
+            
+            // Get runner-up
+            const runnerUp = finalMatch.loser;
+            
+            // Get third place
+            const thirdPlaceMatch = championsLeague.knockout.find(round => round.stage === 'Third-place Playoff').matches[0];
+            const thirdPlace = thirdPlaceMatch.winner;
+            
+            // Get fourth place
+            const fourthPlace = thirdPlaceMatch.loser;
+            
+            // Add to champions history
+            championsLeague.championsHistory.push({
+                season: championsLeague.season,
+                champion: champion.name,
+                runnerUp: runnerUp.name,
+                thirdPlace: thirdPlace.name,
+                fourthPlace: fourthPlace.name
+            });
+            
+            // Increment season
+            championsLeague.season++;
+            
+            // Create final rankings
+            championsLeague.finalRankings = [
+                { position: 1, team: champion },
+                { position: 2, team: runnerUp },
+                { position: 3, team: thirdPlace },
+                { position: 4, team: fourthPlace }
+            ];
+            
+            // Add other teams that reached knockout stage but didn't make top 4
+            const knockoutTeams = [];
+            championsLeague.knockout.forEach(round => {
+                round.matches.forEach(match => {
+                    if (!knockoutTeams.includes(match.homeTeamObj) && match.homeTeamObj !== champion && 
+                        match.homeTeamObj !== runnerUp && match.homeTeamObj !== thirdPlace && match.homeTeamObj !== fourthPlace) {
+                        knockoutTeams.push(match.homeTeamObj);
+                    }
+                    if (!knockoutTeams.includes(match.awayTeamObj) && match.awayTeamObj !== champion && 
+                        match.awayTeamObj !== runnerUp && match.awayTeamObj !== thirdPlace && match.awayTeamObj !== fourthPlace) {
+                        knockoutTeams.push(match.awayTeamObj);
+                    }
+                });
+            });
+            
+            // Sort knockout teams by their performance (simplified)
+            knockoutTeams.sort((a, b) => b.strength - a.strength);
+            
+            // Add them to rankings
+            knockoutTeams.forEach((team, index) => {
+                championsLeague.finalRankings.push({
+                    position: 5 + index,
+                    team: team
+                });
+            });
+            
+            // Add group stage teams that didn't qualify for knockout
+            const groupStageTeams = [];
+            championsLeague.groups.forEach(group => {
+                group.teams.forEach(team => {
+                    if (!championsLeague.finalRankings.some(r => r.team.id === team.id)) {
+                        groupStageTeams.push(team);
+                    }
+                });
+            });
+            
+            // Sort group stage teams by points
+            groupStageTeams.sort((a, b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+                return b.goalsFor - a.goalsFor;
+            });
+            
+            // Add them to rankings
+            groupStageTeams.forEach((team, index) => {
+                championsLeague.finalRankings.push({
+                    position: 5 + knockoutTeams.length + index,
+                    team: team
+                });
+            });
+        }
+        
+        // Update tournament progress
+        function updateTournamentProgress() {
+            if (!championsLeague.tournamentStartDate || !championsLeague.tournamentEndDate) {
+                tournamentProgressFill.style.width = '0%';
+                return;
+            }
+            
+            const today = new Date();
+            const startDate = new Date(championsLeague.tournamentStartDate);
+            const endDate = new Date(championsLeague.tournamentEndDate);
+            
+            // Update date displays
+            startDateSpan.textContent = `Day 1: ${formatDate(startDate)}`;
+            endDateSpan.textContent = `Day 7: ${formatDate(endDate)}`;
+            
+            // Calculate progress percentage
+            const totalDuration = endDate - startDate;
+            const elapsed = today - startDate;
+            
+            let progressPercentage = (elapsed / totalDuration) * 100;
+            
+            // Cap at 100%
+            if (progressPercentage > 100) {
+                progressPercentage = 100;
+            } else if (progressPercentage < 0) {
+                progressPercentage = 0;
+            }
+            
+            tournamentProgressFill.style.width = `${progressPercentage}%`;
+        }
+        
         // Create stars for Champions League animation
         function createStars() {
             for (let i = 0; i < 50; i++) {
@@ -2653,6 +3129,7 @@
         // Render Champions League History
         function renderChampionsLeagueHistory() {
             trophyCase.innerHTML = '';
+            finalRankingsContainer.innerHTML = '<h3>Final Rankings</h3>';
             teamHistoryContainer.innerHTML = '<h3>Team Championship History</h3>';
             
             // If no archives, show empty state
@@ -2689,6 +3166,42 @@
                 trophyCase.appendChild(championTrophy);
             }
             
+            // Render final rankings
+            if (championsLeague.finalRankings.length > 0) {
+                championsLeague.finalRankings.forEach(ranking => {
+                    const rankingItem = document.createElement('div');
+                    rankingItem.className = 'ranking-item';
+                    
+                    const positionClass = `position-${ranking.position}`;
+                    const team = teams.find(t => t.id === ranking.team.id);
+                    
+                    if (!team) return;
+                    
+                    let stars = '';
+                    if (team.championships > 0) {
+                        stars = '*'.repeat(team.championships);
+                    }
+                    
+                    rankingItem.innerHTML = `
+                        <div class="ranking-position ${positionClass}">${ranking.position}</div>
+                        <div class="ranking-team">
+                            <span class="${ranking.position === 1 ? 'champion-name' : ''}">${team.name}</span>
+                            ${stars ? `<span class="ranking-stars">${stars}</span>` : ''}
+                        </div>
+                    `;
+                    
+                    finalRankingsContainer.appendChild(rankingItem);
+                });
+            } else {
+                finalRankingsContainer.innerHTML += `
+                    <div class="empty-state">
+                        <i class="fas fa-list-ol"></i>
+                        <h3>No Final Rankings</h3>
+                        <p>Complete a tournament to see final rankings</p>
+                    </div>
+                `;
+            }
+            
             // Render team history
             const teamsWithChampionships = teams.filter(team => team.championships > 0);
             
@@ -2708,10 +3221,11 @@
                 teamHistoryItem.className = 'history-item';
                 
                 const championshipsText = `${team.championships} Championship${team.championships > 1 ? 's' : ''}`;
+                const stars = '*'.repeat(team.championships);
                 
                 teamHistoryItem.innerHTML = `
                     <div>
-                        <strong>${team.name}</strong>
+                        <strong>${team.name} <span class="champion-stars">${stars}</span></strong>
                         <div class="match-date">${championshipsText}</div>
                     </div>
                     <div>
