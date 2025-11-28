@@ -2207,22 +2207,59 @@ function scheduleChampionsLeagueFixtures() {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set to start of today
     
+    // Clear existing dates first
+    championsLeague.fixtures.forEach(fixture => {
+        if (fixture.stage === 'group') {
+            fixture.date = null;
+        }
+    });
+    
     // Group stage has 6 matchdays
     for (let md = 1; md <= 6; md++) {
+        // Get fixtures for the current matchday
         const matchdayFixtures = championsLeague.fixtures.filter(f => 
-            f.stage === 'group' && 
-            ((md <= 3 && f.matchday === md) || (md > 3 && f.matchday === md - 3))
+            f.stage === 'group' && f.matchday === md
         );
         
         // Set dates for this matchday - starting today for matchday 1
         const fixtureDate = new Date(today);
         fixtureDate.setDate(today.getDate() + (md - 1)); // Add days based on matchday
         
-        // Set dates for this matchday
+        // Set dates for all fixtures in this matchday
         matchdayFixtures.forEach(fixture => {
             fixture.date = new Date(fixtureDate);
+            // Keep the original matchday number
             fixture.matchday = md;
         });
+        
+        console.log(`Matchday ${md}: ${matchdayFixtures.length} fixtures on ${fixtureDate.toDateString()}`);
+    }
+    
+    // Verify no team plays twice on the same day
+    verifySingleMatchPerDay();
+}
+
+// Verification function to ensure no team plays twice on same day
+function verifySingleMatchPerDay() {
+    const teamMatchdays = {};
+    let hasDuplicates = false;
+    
+    championsLeague.fixtures.forEach(fixture => {
+        if (fixture.stage === 'group' && fixture.date) {
+            const dateKey = fixture.date.toDateString();
+            [fixture.homeTeam, fixture.awayTeam].forEach(team => {
+                if (!teamMatchdays[team]) teamMatchdays[team] = new Set();
+                if (teamMatchdays[team].has(dateKey)) {
+                    console.warn(`⚠️ ${team} plays twice on ${dateKey}`);
+                    hasDuplicates = true;
+                }
+                teamMatchdays[team].add(dateKey);
+            });
+        }
+    });
+    
+    if (!hasDuplicates) {
+        console.log('✅ All teams play only once per matchday');
     }
 }
         
