@@ -2201,67 +2201,66 @@
             updateTournamentProgress();
         }
         
-  
-// Schedule Champions League fixtures
-function scheduleChampionsLeagueFixtures() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of today
-    
-    // Clear existing dates first
-    championsLeague.fixtures.forEach(fixture => {
-        if (fixture.stage === 'group') {
-            fixture.date = null;
-        }
-    });
-    
-    // Group stage has 6 matchdays
-    for (let md = 1; md <= 6; md++) {
-        // Get fixtures for the current matchday
-        const matchdayFixtures = championsLeague.fixtures.filter(f => 
-            f.stage === 'group' && f.matchday === md
-        );
-        
-        // Set dates for this matchday - starting today for matchday 1
-        const fixtureDate = new Date(today);
-        fixtureDate.setDate(today.getDate() + (md - 1)); // Add days based on matchday
-        
-        // Set dates for all fixtures in this matchday
-        matchdayFixtures.forEach(fixture => {
-            fixture.date = new Date(fixtureDate);
-            // Keep the original matchday number
-            fixture.matchday = md;
-        });
-        
-        console.log(`Matchday ${md}: ${matchdayFixtures.length} fixtures on ${fixtureDate.toDateString()}`);
-    }
-    
-    // Verify no team plays twice on the same day
-    verifySingleMatchPerDay();
-}
-
-// Verification function to ensure no team plays twice on same day
-function verifySingleMatchPerDay() {
-    const teamMatchdays = {};
-    let hasDuplicates = false;
-    
-    championsLeague.fixtures.forEach(fixture => {
-        if (fixture.stage === 'group' && fixture.date) {
-            const dateKey = fixture.date.toDateString();
-            [fixture.homeTeam, fixture.awayTeam].forEach(team => {
-                if (!teamMatchdays[team]) teamMatchdays[team] = new Set();
-                if (teamMatchdays[team].has(dateKey)) {
-                    console.warn(`⚠️ ${team} plays twice on ${dateKey}`);
-                    hasDuplicates = true;
+        // Schedule Champions League fixtures
+        function scheduleChampionsLeagueFixtures() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set to start of today
+            
+            // Clear existing dates first
+            championsLeague.fixtures.forEach(fixture => {
+                if (fixture.stage === 'group') {
+                    fixture.date = null;
                 }
-                teamMatchdays[team].add(dateKey);
             });
+            
+            // Group stage has 6 matchdays
+            for (let md = 1; md <= 6; md++) {
+                // Get fixtures for the current matchday
+                const matchdayFixtures = championsLeague.fixtures.filter(f => 
+                    f.stage === 'group' && f.matchday === md
+                );
+                
+                // Set dates for this matchday - starting today for matchday 1
+                const fixtureDate = new Date(today);
+                fixtureDate.setDate(today.getDate() + (md - 1)); // Add days based on matchday
+                
+                // Set dates for all fixtures in this matchday
+                matchdayFixtures.forEach(fixture => {
+                    fixture.date = new Date(fixtureDate);
+                    // Keep the original matchday number
+                    fixture.matchday = md;
+                });
+                
+                console.log(`Matchday ${md}: ${matchdayFixtures.length} fixtures on ${fixtureDate.toDateString()}`);
+            }
+            
+            // Verify no team plays twice on the same day
+            verifySingleMatchPerDay();
         }
-    });
-    
-    if (!hasDuplicates) {
-        console.log('✅ All teams play only once per matchday');
-    }
-}
+        
+        // Verification function to ensure no team plays twice on same day
+        function verifySingleMatchPerDay() {
+            const teamMatchdays = {};
+            let hasDuplicates = false;
+            
+            championsLeague.fixtures.forEach(fixture => {
+                if (fixture.stage === 'group' && fixture.date) {
+                    const dateKey = fixture.date.toDateString();
+                    [fixture.homeTeam, fixture.awayTeam].forEach(team => {
+                        if (!teamMatchdays[team]) teamMatchdays[team] = new Set();
+                        if (teamMatchdays[team].has(dateKey)) {
+                            console.warn(`⚠️ ${team} plays twice on ${dateKey}`);
+                            hasDuplicates = true;
+                        }
+                        teamMatchdays[team].add(dateKey);
+                    });
+                }
+            });
+            
+            if (!hasDuplicates) {
+                console.log('✅ All teams play only once per matchday');
+            }
+        }
         
         // Render Champions League fixtures
         function renderChampionsLeagueFixtures() {
@@ -2807,6 +2806,113 @@ function verifySingleMatchPerDay() {
                 
                 knockoutStage.appendChild(roundCard);
             });
+        }
+        
+        // Simulate group matches
+        simulateGroupsBtn.addEventListener('click', function() {
+            if (championsLeague.groups.length === 0) {
+                showNotification('Generate groups first!', 'danger');
+                return;
+            }
+            
+            simulateAllGroupMatches();
+            saveData();
+            
+            showNotification('All group matches simulated!');
+        });
+        
+        // Simulate all group matches
+        function simulateAllGroupMatches() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            championsLeague.fixtures.forEach(fixture => {
+                if (fixture.stage === 'group' && !fixture.completed && new Date(fixture.date) <= today) {
+                    const homeTeam = teams.find(t => t.id === fixture.homeTeam);
+                    const awayTeam = teams.find(t => t.id === fixture.awayTeam);
+                    
+                    if (!homeTeam || !awayTeam) return;
+                    
+                    // Calculate probability based on team strength
+                    const homeStrength = homeTeam.strength;
+                    const awayStrength = awayTeam.strength;
+                    const totalStrength = homeStrength + awayStrength;
+                    
+                    const homeWinProbability = homeStrength / totalStrength;
+                    const awayWinProbability = awayStrength / totalStrength;
+                    const drawProbability = 0.2; // 20% chance of draw
+                    
+                    // Generate random result
+                    const random = Math.random();
+                    
+                    if (random < homeWinProbability) {
+                        // Home team wins
+                        fixture.homeScore = Math.floor(Math.random() * 4) + 1;
+                        fixture.awayScore = Math.floor(Math.random() * 3);
+                    } else if (random < homeWinProbability + awayWinProbability) {
+                        // Away team wins
+                        fixture.homeScore = Math.floor(Math.random() * 3);
+                        fixture.awayScore = Math.floor(Math.random() * 4) + 1;
+                    } else {
+                        // Draw
+                        fixture.homeScore = Math.floor(Math.random() * 2) + 1;
+                        fixture.awayScore = fixture.homeScore;
+                    }
+                    
+                    fixture.completed = true;
+                    
+                    // Update team stats in the group
+                    const group = championsLeague.groups.find(g => g.name === fixture.group);
+                    if (!group) return;
+                    
+                    const homeTeamInGroup = group.teams.find(t => t.id === fixture.homeTeam);
+                    const awayTeamInGroup = group.teams.find(t => t.id === fixture.awayTeam);
+                    
+                    if (!homeTeamInGroup || !awayTeamInGroup) return;
+                    
+                    // Update matches played
+                    homeTeamInGroup.played++;
+                    awayTeamInGroup.played++;
+                    
+                    // Update goals
+                    homeTeamInGroup.goalsFor += fixture.homeScore;
+                    homeTeamInGroup.goalsAgainst += fixture.awayScore;
+                    awayTeamInGroup.goalsFor += fixture.awayScore;
+                    awayTeamInGroup.goalsAgainst += fixture.homeScore;
+                    
+                    // Update goal difference
+                    homeTeamInGroup.goalDifference = homeTeamInGroup.goalsFor - homeTeamInGroup.goalsAgainst;
+                    awayTeamInGroup.goalDifference = awayTeamInGroup.goalsFor - awayTeamInGroup.goalsAgainst;
+                    
+                    // Update results and points
+                    if (fixture.homeScore > fixture.awayScore) {
+                        // Home team wins
+                        homeTeamInGroup.wins++;
+                        awayTeamInGroup.losses++;
+                        homeTeamInGroup.points += 3;
+                    } else if (fixture.homeScore < fixture.awayScore) {
+                        // Away team wins
+                        homeTeamInGroup.losses++;
+                        awayTeamInGroup.wins++;
+                        awayTeamInGroup.points += 3;
+                    } else {
+                        // Draw
+                        homeTeamInGroup.draws++;
+                        awayTeamInGroup.draws++;
+                        homeTeamInGroup.points += 1;
+                        awayTeamInGroup.points += 1;
+                    }
+                }
+            });
+            
+            renderChampionsLeagueGroups();
+            renderChampionsLeagueFixtures();
+            renderChampionsResultsInput();
+            renderChampionsMatchHistory();
+            updateTournamentProgress();
+            
+            // Check if all group stage matches are completed
+            checkGroupStageCompletion();
         }
         
         // Simulate knockout stage
@@ -3783,4 +3889,3 @@ function verifySingleMatchPerDay() {
     </script>
 </body>
 </html>
-
