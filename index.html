@@ -1333,6 +1333,65 @@
             transition: width 0.5s ease;
         }
         
+        /* New styles for the results panel */
+        .results-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .results-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .results-section {
+            margin-bottom: 20px;
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .results-list {
+            margin-top: 0;
+        }
+        
+        .result-card {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 5px solid var(--gold);
+            transition: all 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .result-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateX(5px);
+        }
+        
+        .result-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .match-actions {
+            margin-top: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -1574,22 +1633,35 @@
         <div class="tab-content" id="results">
             <div class="card champions-league-card">
                 <h2 class="card-title champions-league-title">Enter Match Results</h2>
-                <div id="champions-results-list">
-                    <div class="empty-state">
-                        <i class="fas fa-clipboard-list"></i>
-                        <h3>No Matches to Record</h3>
-                        <p>Generate fixtures and start a matchday to enter results</p>
+                <div class="results-panel">
+                    <div class="results-section">
+                        <div class="results-header">
+                            <h3>Current Matchday Results</h3>
+                            <div class="matchday-selector">
+                                <label for="results-matchday-select">Matchday:</label>
+                                <select id="results-matchday-select">
+                                    <!-- Matchday options will be populated here -->
+                                </select>
+                            </div>
+                        </div>
+                        <div id="current-results-list" class="results-list">
+                            <div class="empty-state">
+                                <i class="fas fa-clipboard-list"></i>
+                                <h3>No Matches to Record</h3>
+                                <p>Generate fixtures and start a matchday to enter results</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="card champions-league-card">
-                <h2 class="card-title champions-league-title">Match History</h2>
-                <div id="champions-match-history">
-                    <div class="empty-state">
-                        <i class="fas fa-history"></i>
-                        <h3>No Match History</h3>
-                        <p>Play matches to build a history</p>
+                    
+                    <div class="results-section">
+                        <h3>Match History</h3>
+                        <div id="match-history-list" class="results-list">
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <h3>No Match History</h3>
+                                <p>Play matches to build a history</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="download-section">
@@ -1732,8 +1804,9 @@
         const knockoutStage = document.getElementById('knockout-stage');
         const championsFixtures = document.getElementById('champions-fixtures');
         const championsMatchdaySelect = document.getElementById('champions-matchday-select');
-        const championsResultsList = document.getElementById('champions-results-list');
-        const championsMatchHistory = document.getElementById('champions-match-history');
+        const currentResultsList = document.getElementById('current-results-list');
+        const matchHistoryList = document.getElementById('match-history-list');
+        const resultsMatchdaySelect = document.getElementById('results-matchday-select');
         const predictionsList = document.getElementById('predictions-list');
         const matchdayAnalysis = document.getElementById('matchday-analysis');
         const teamPerformance = document.getElementById('team-performance');
@@ -1757,83 +1830,40 @@
         
         // Initialize data from localStorage
         function initializeData() {
-            try {
-                if (localStorage.getItem('championsLeagueTeams')) {
-                    teams = JSON.parse(localStorage.getItem('championsLeagueTeams'));
-                }
-                
-                if (localStorage.getItem('championsLeague')) {
-                    const savedData = JSON.parse(localStorage.getItem('championsLeague'));
-                    // Ensure all required properties exist
-                    championsLeague = {
-                        groups: savedData.groups || [],
-                        knockout: savedData.knockout || [],
-                        summary: savedData.summary || [],
-                        fixtures: savedData.fixtures || [],
-                        currentStage: savedData.currentStage || 'group',
-                        championsHistory: savedData.championsHistory || [],
-                        currentMatchday: savedData.currentMatchday || 1,
-                        season: savedData.season || 1,
-                        tournamentStartDate: savedData.tournamentStartDate ? new Date(savedData.tournamentStartDate) : null,
-                        tournamentEndDate: savedData.tournamentEndDate ? new Date(savedData.tournamentEndDate) : null,
-                        finalRankings: savedData.finalRankings || []
-                    };
-                }
-                
-                renderTeams();
-                createStars();
-                
-                // Show champions league data if available
-                if (championsLeague.groups.length > 0) {
-                    renderChampionsLeagueGroups();
-                    renderChampionsLeagueFixtures();
-                    renderChampionsResultsInput();
-                    renderChampionsMatchHistory();
-                    updateTournamentProgress();
-                }
-                
-                if (championsLeague.knockout.length > 0) {
-                    renderChampionsLeagueKnockout();
-                }
-                
-                // Render archives
-                renderChampionsLeagueHistory();
-                
-                // Set up download buttons
-                setupDownloadButtons();
-                
-                console.log('Data initialized successfully');
-            } catch (error) {
-                console.error('Error initializing data:', error);
-                showNotification('Error loading saved data. Starting fresh.', 'warning');
-                // Reset to default state
-                teams = [];
-                championsLeague = {
-                    groups: [],
-                    knockout: [],
-                    summary: [],
-                    fixtures: [],
-                    currentStage: 'group',
-                    championsHistory: [],
-                    currentMatchday: 1,
-                    season: 1,
-                    tournamentStartDate: null,
-                    tournamentEndDate: null,
-                    finalRankings: []
-                };
-                saveData();
+            if (localStorage.getItem('championsLeagueTeams')) {
+                teams = JSON.parse(localStorage.getItem('championsLeagueTeams'));
             }
+            
+            if (localStorage.getItem('championsLeague')) {
+                championsLeague = JSON.parse(localStorage.getItem('championsLeague'));
+            }
+            
+            renderTeams();
+            createStars();
+            
+            // Show champions league data if available
+            if (championsLeague.groups.length > 0) {
+                renderChampionsLeagueGroups();
+                renderChampionsLeagueFixtures();
+                renderResultsPanel();
+                updateTournamentProgress();
+            }
+            
+            if (championsLeague.knockout.length > 0) {
+                renderChampionsLeagueKnockout();
+            }
+            
+            // Render archives
+            renderChampionsLeagueHistory();
+            
+            // Set up download buttons
+            setupDownloadButtons();
         }
         
         // Save data to localStorage
         function saveData() {
-            try {
-                localStorage.setItem('championsLeagueTeams', JSON.stringify(teams));
-                localStorage.setItem('championsLeague', JSON.stringify(championsLeague));
-            } catch (error) {
-                console.error('Error saving data:', error);
-                showNotification('Error saving data to storage', 'danger');
-            }
+            localStorage.setItem('championsLeagueTeams', JSON.stringify(teams));
+            localStorage.setItem('championsLeague', JSON.stringify(championsLeague));
         }
         
         // Show notification
@@ -1998,8 +2028,7 @@
                 renderTeams();
                 renderChampionsLeagueGroups();
                 renderChampionsLeagueFixtures();
-                renderChampionsResultsInput();
-                renderChampionsMatchHistory();
+                renderResultsPanel();
                 
                 showNotification(`Team ${team.name} deleted successfully!`);
             }
@@ -2031,8 +2060,7 @@
                 renderTeams();
                 renderChampionsLeagueGroups();
                 renderChampionsLeagueFixtures();
-                renderChampionsResultsInput();
-                renderChampionsMatchHistory();
+                renderResultsPanel();
                 renderChampionsLeagueKnockout();
                 renderChampionsLeagueHistory();
                 updateTournamentProgress();
@@ -2239,7 +2267,7 @@
             scheduleChampionsLeagueFixtures();
             
             renderChampionsLeagueFixtures();
-            renderChampionsResultsInput();
+            renderResultsPanel();
             updateTournamentProgress();
         }
         
@@ -2448,130 +2476,15 @@
             });
         }
         
-        // Render Champions League results input - FIXED VERSION
-        function renderChampionsResultsInput() {
-            console.log('Rendering results input...');
-            championsResultsList.innerHTML = '';
-            
-            if (!championsLeague.fixtures || championsLeague.fixtures.length === 0) {
-                championsResultsList.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-clipboard-list"></i>
-                        <h3>No Matches to Record</h3>
-                        <p>Generate groups and fixtures to enter results</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            // Get fixtures for current matchday that are not completed and are today or in the past
-            const currentMatchdayFixtures = championsLeague.fixtures.filter(f => {
-                if (!f || f.completed) return false;
-                
-                const fixtureDate = f.date ? new Date(f.date) : null;
-                if (!fixtureDate) return false;
-                
-                fixtureDate.setHours(0, 0, 0, 0);
-                return fixtureDate <= today && f.matchday === championsLeague.currentMatchday;
-            });
-            
-            console.log(`Found ${currentMatchdayFixtures.length} fixtures for results input`);
-            
-            if (currentMatchdayFixtures.length === 0) {
-                championsResultsList.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-clipboard-list"></i>
-                        <h3>No Matches to Record</h3>
-                        <p>All matches for current matchday have been completed or no fixtures available</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            currentMatchdayFixtures.forEach(fixture => {
-                const homeTeam = teams.find(t => t.id === fixture.homeTeam);
-                const awayTeam = teams.find(t => t.id === fixture.awayTeam);
-                
-                if (!homeTeam || !awayTeam) {
-                    console.warn('Could not find teams for fixture:', fixture);
-                    return;
-                }
-                
-                const fixtureCard = document.createElement('div');
-                fixtureCard.className = 'champions-fixture-card';
-                
-                fixtureCard.innerHTML = `
-                    <div class="champions-fixture-content">
-                        <div class="match-teams">
-                            <div class="team-badge">${homeTeam.name.substring(0, 2).toUpperCase()}</div>
-                            <span class="team-name">${homeTeam.name}</span>
-                            <span class="vs">vs</span>
-                            <span class="team-name">${awayTeam.name}</span>
-                            <div class="team-badge">${awayTeam.name.substring(0, 2).toUpperCase()}</div>
-                        </div>
-                        <div class="match-date">${fixture.date ? formatDate(new Date(fixture.date)) : 'Date TBD'} • ${fixture.group || fixture.stage || 'Group Stage'}</div>
-                    </div>
-                    <div class="champions-result-input">
-                        <input type="number" min="0" id="champions-home-score-${fixture.id}" placeholder="0">
-                        <span>-</span>
-                        <input type="number" min="0" id="champions-away-score-${fixture.id}" placeholder="0">
-                        <button class="btn-success save-champions-result" data-fixture="${fixture.id}">Save Result</button>
-                    </div>
-                `;
-                
-                championsResultsList.appendChild(fixtureCard);
-            });
-            
-            // Add event listeners to save buttons
-            document.querySelectorAll('.save-champions-result').forEach(button => {
-                button.addEventListener('click', function() {
-                    const fixtureId = parseInt(this.getAttribute('data-fixture'));
-                    const homeScoreInput = document.getElementById(`champions-home-score-${fixtureId}`);
-                    const awayScoreInput = document.getElementById(`champions-away-score-${fixtureId}`);
-                    
-                    if (!homeScoreInput || !awayScoreInput) {
-                        showNotification('Error finding score inputs!', 'danger');
-                        return;
-                    }
-                    
-                    const homeScore = parseInt(homeScoreInput.value);
-                    const awayScore = parseInt(awayScoreInput.value);
-                    
-                    if (isNaN(homeScore) || isNaN(awayScore)) {
-                        showNotification('Please enter valid scores for both teams!', 'danger');
-                        return;
-                    }
-                    
-                    if (homeScore < 0 || awayScore < 0) {
-                        showNotification('Scores cannot be negative!', 'danger');
-                        return;
-                    }
-                    
-                    saveChampionsResult(fixtureId, homeScore, awayScore);
-                });
-            });
-            
-            console.log('Results input rendered successfully');
-        }
-        
         // Save Champions League result
         function saveChampionsResult(fixtureId, homeScore, awayScore) {
-            console.log(`Saving result for fixture ${fixtureId}: ${homeScore}-${awayScore}`);
-            
             const fixture = championsLeague.fixtures.find(f => f.id === fixtureId);
-            if (!fixture) {
-                showNotification('Fixture not found!', 'danger');
-                return;
-            }
+            if (!fixture) return;
             
             // Check if matchday is current or past
-            const fixtureDate = fixture.date ? new Date(fixture.date) : new Date();
+            const fixtureDate = new Date(fixture.date);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            fixtureDate.setHours(0, 0, 0, 0);
             
             if (fixtureDate > today) {
                 showNotification('Cannot enter results for future matches!', 'danger');
@@ -2583,54 +2496,51 @@
             fixture.completed = true;
             
             // Update team stats in the group
-            if (fixture.stage === 'group') {
-                const group = championsLeague.groups.find(g => g.name === fixture.group);
-                if (group) {
-                    const homeTeam = group.teams.find(t => t.id === fixture.homeTeam);
-                    const awayTeam = group.teams.find(t => t.id === fixture.awayTeam);
-                    
-                    if (homeTeam && awayTeam) {
-                        // Update matches played
-                        homeTeam.played++;
-                        awayTeam.played++;
-                        
-                        // Update goals
-                        homeTeam.goalsFor += homeScore;
-                        homeTeam.goalsAgainst += awayScore;
-                        awayTeam.goalsFor += awayScore;
-                        awayTeam.goalsAgainst += homeScore;
-                        
-                        // Update goal difference
-                        homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
-                        awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
-                        
-                        // Update results and points
-                        if (homeScore > awayScore) {
-                            // Home team wins
-                            homeTeam.wins++;
-                            awayTeam.losses++;
-                            homeTeam.points += 3;
-                        } else if (homeScore < awayScore) {
-                            // Away team wins
-                            homeTeam.losses++;
-                            awayTeam.wins++;
-                            awayTeam.points += 3;
-                        } else {
-                            // Draw
-                            homeTeam.draws++;
-                            awayTeam.draws++;
-                            homeTeam.points += 1;
-                            awayTeam.points += 1;
-                        }
-                    }
-                }
+            const group = championsLeague.groups.find(g => g.name === fixture.group);
+            if (!group) return;
+            
+            const homeTeam = group.teams.find(t => t.id === fixture.homeTeam);
+            const awayTeam = group.teams.find(t => t.id === fixture.awayTeam);
+            
+            if (!homeTeam || !awayTeam) return;
+            
+            // Update matches played
+            homeTeam.played++;
+            awayTeam.played++;
+            
+            // Update goals
+            homeTeam.goalsFor += homeScore;
+            homeTeam.goalsAgainst += awayScore;
+            awayTeam.goalsFor += awayScore;
+            awayTeam.goalsAgainst += homeScore;
+            
+            // Update goal difference
+            homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
+            awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
+            
+            // Update results and points
+            if (homeScore > awayScore) {
+                // Home team wins
+                homeTeam.wins++;
+                awayTeam.losses++;
+                homeTeam.points += 3;
+            } else if (homeScore < awayScore) {
+                // Away team wins
+                homeTeam.losses++;
+                awayTeam.wins++;
+                awayTeam.points += 3;
+            } else {
+                // Draw
+                homeTeam.draws++;
+                awayTeam.draws++;
+                homeTeam.points += 1;
+                awayTeam.points += 1;
             }
             
             saveData();
             renderChampionsLeagueGroups();
             renderChampionsLeagueFixtures();
-            renderChampionsResultsInput(); // This should now work without freezing
-            renderChampionsMatchHistory();
+            renderResultsPanel();
             updateTournamentProgress();
             
             showNotification('Champions League result saved successfully!');
@@ -2639,14 +2549,123 @@
             checkGroupStageCompletion();
         }
         
-        // Render Champions League match history
-        function renderChampionsMatchHistory() {
-            championsMatchHistory.innerHTML = '';
+        // Render Results Panel
+        function renderResultsPanel() {
+            renderCurrentResults();
+            renderMatchHistory();
+        }
+        
+        // Render current results input
+        function renderCurrentResults() {
+            currentResultsList.innerHTML = '';
+            
+            if (championsLeague.fixtures.length === 0) {
+                currentResultsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h3>No Matches to Record</h3>
+                        <p>Generate fixtures and start a matchday to enter results</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Populate matchday selector
+            resultsMatchdaySelect.innerHTML = '';
+            const maxMatchday = Math.max(...championsLeague.fixtures.map(f => f.matchday));
+            for (let i = 1; i <= maxMatchday; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `Matchday ${i}`;
+                resultsMatchdaySelect.appendChild(option);
+            }
+            
+            // Set default to current matchday
+            resultsMatchdaySelect.value = championsLeague.currentMatchday;
+            
+            // Render results for selected matchday
+            renderSelectedMatchdayResults();
+            
+            // Add event listener for matchday change
+            resultsMatchdaySelect.addEventListener('change', renderSelectedMatchdayResults);
+        }
+        
+        // Render selected matchday results
+        function renderSelectedMatchdayResults() {
+            const selectedMatchday = parseInt(resultsMatchdaySelect.value);
+            const matchdayFixtures = championsLeague.fixtures.filter(f => 
+                f.matchday === selectedMatchday && !f.completed
+            );
+            
+            currentResultsList.innerHTML = '';
+            
+            if (matchdayFixtures.length === 0) {
+                currentResultsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-check"></i>
+                        <h3>All Matches Completed</h3>
+                        <p>All matches for this matchday have been completed</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            matchdayFixtures.forEach(fixture => {
+                const homeTeam = teams.find(t => t.id === fixture.homeTeam);
+                const awayTeam = teams.find(t => t.id === fixture.awayTeam);
+                
+                if (!homeTeam || !awayTeam) return;
+                
+                const resultCard = document.createElement('div');
+                resultCard.className = 'result-card';
+                
+                resultCard.innerHTML = `
+                    <div class="result-content">
+                        <div class="match-teams">
+                            <div class="team-badge">${homeTeam.name.substring(0, 2).toUpperCase()}</div>
+                            <span class="team-name">${homeTeam.name}</span>
+                            <span class="vs">vs</span>
+                            <span class="team-name">${awayTeam.name}</span>
+                            <div class="team-badge">${awayTeam.name.substring(0, 2).toUpperCase()}</div>
+                        </div>
+                        <div class="match-date">${formatDate(new Date(fixture.date))} • ${fixture.group || fixture.stage}</div>
+                    </div>
+                    <div class="result-input">
+                        <input type="number" min="0" id="home-score-${fixture.id}" placeholder="0">
+                        <span>-</span>
+                        <input type="number" min="0" id="away-score-${fixture.id}" placeholder="0">
+                        <button class="btn-success save-result" data-fixture="${fixture.id}">Save Result</button>
+                    </div>
+                `;
+                
+                currentResultsList.appendChild(resultCard);
+            });
+            
+            // Add event listeners to save buttons
+            document.querySelectorAll('.save-result').forEach(button => {
+                button.addEventListener('click', function() {
+                    const fixtureId = parseInt(this.getAttribute('data-fixture'));
+                    const homeScore = parseInt(document.getElementById(`home-score-${fixtureId}`).value);
+                    const awayScore = parseInt(document.getElementById(`away-score-${fixtureId}`).value);
+                    
+                    if (isNaN(homeScore) || isNaN(awayScore)) {
+                        showNotification('Please enter valid scores for both teams!', 'danger');
+                        return;
+                    }
+                    
+                    saveChampionsResult(fixtureId, homeScore, awayScore);
+                });
+            });
+        }
+        
+        // Render match history
+        function renderMatchHistory() {
+            matchHistoryList.innerHTML = '';
             
             const completedFixtures = championsLeague.fixtures.filter(f => f.completed);
             
             if (completedFixtures.length === 0) {
-                championsMatchHistory.innerHTML = `
+                matchHistoryList.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-history"></i>
                         <h3>No Match History</h3>
@@ -2666,9 +2685,9 @@
                 if (!homeTeam || !awayTeam) return;
                 
                 const resultCard = document.createElement('div');
-                resultCard.className = 'champions-fixture-card';
+                resultCard.className = 'result-card';
                 resultCard.innerHTML = `
-                    <div class="champions-fixture-content">
+                    <div class="result-content">
                         <div class="match-teams">
                             <div class="team-badge">${homeTeam.name.substring(0, 2).toUpperCase()}</div>
                             <span class="team-name">${homeTeam.name}</span>
@@ -2678,14 +2697,16 @@
                         </div>
                         <div class="match-date">${formatDate(new Date(fixture.date))} • ${fixture.group || fixture.stage}</div>
                     </div>
-                    <button class="btn-danger edit-champions-result" data-fixture="${fixture.id}">Edit</button>
+                    <div class="match-actions">
+                        <button class="btn-danger edit-result" data-fixture="${fixture.id}">Edit</button>
+                    </div>
                 `;
                 
-                championsMatchHistory.appendChild(resultCard);
+                matchHistoryList.appendChild(resultCard);
             });
             
             // Add event listeners to edit buttons
-            document.querySelectorAll('.edit-champions-result').forEach(button => {
+            document.querySelectorAll('.edit-result').forEach(button => {
                 button.addEventListener('click', function() {
                     const fixtureId = parseInt(this.getAttribute('data-fixture'));
                     editChampionsResult(fixtureId);
@@ -2744,8 +2765,7 @@
             saveData();
             renderChampionsLeagueGroups();
             renderChampionsLeagueFixtures();
-            renderChampionsResultsInput();
-            renderChampionsMatchHistory();
+            renderResultsPanel();
             updateTournamentProgress();
             
             showNotification('Champions League result removed. You can now enter the correct result.', 'warning');
@@ -2821,6 +2841,7 @@
             
             renderChampionsLeagueKnockout();
             renderChampionsLeagueFixtures();
+            renderResultsPanel();
             updateTournamentProgress();
         }
         
@@ -2981,8 +3002,7 @@
             
             renderChampionsLeagueGroups();
             renderChampionsLeagueFixtures();
-            renderChampionsResultsInput();
-            renderChampionsMatchHistory();
+            renderResultsPanel();
             updateTournamentProgress();
             
             // Check if all group stage matches are completed
@@ -3183,6 +3203,7 @@
             
             renderChampionsLeagueKnockout();
             renderChampionsLeagueFixtures();
+            renderResultsPanel();
             updateTournamentProgress();
         }
         
@@ -3742,7 +3763,7 @@
             return date.toLocaleDateString('en-US', options);
         }
         
-        // Tab switching - FIXED VERSION
+        // Tab switching
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
                 const tabId = this.getAttribute('data-tab');
@@ -3751,8 +3772,6 @@
         });
         
         function switchTab(tabId) {
-            console.log(`Switching to tab: ${tabId}`);
-            
             // Update active tab
             tabs.forEach(tab => {
                 if (tab.getAttribute('data-tab') === tabId) {
@@ -3766,15 +3785,6 @@
             tabContents.forEach(content => {
                 if (content.id === tabId) {
                     content.classList.add('active');
-                    
-                    // Special handling for Results tab
-                    if (tabId === 'results') {
-                        // Force refresh of results when switching to this tab
-                        setTimeout(() => {
-                            renderChampionsResultsInput();
-                            renderChampionsMatchHistory();
-                        }, 100);
-                    }
                 } else {
                     content.classList.remove('active');
                 }
@@ -3969,20 +3979,7 @@
         
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            try {
-                initializeData();
-                
-                // Add global error handler to prevent freezing
-                window.addEventListener('error', function(e) {
-                    console.error('Global error:', e.error);
-                    showNotification('An error occurred. Please refresh the page.', 'danger');
-                });
-                
-                console.log('Champions League Manager initialized successfully');
-            } catch (error) {
-                console.error('Failed to initialize application:', error);
-                showNotification('Failed to initialize application. Please refresh the page.', 'danger');
-            }
+            initializeData();
         });
     </script>
 </body>
