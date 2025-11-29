@@ -1757,41 +1757,83 @@
         
         // Initialize data from localStorage
         function initializeData() {
-            if (localStorage.getItem('championsLeagueTeams')) {
-                teams = JSON.parse(localStorage.getItem('championsLeagueTeams'));
+            try {
+                if (localStorage.getItem('championsLeagueTeams')) {
+                    teams = JSON.parse(localStorage.getItem('championsLeagueTeams'));
+                }
+                
+                if (localStorage.getItem('championsLeague')) {
+                    const savedData = JSON.parse(localStorage.getItem('championsLeague'));
+                    // Ensure all required properties exist
+                    championsLeague = {
+                        groups: savedData.groups || [],
+                        knockout: savedData.knockout || [],
+                        summary: savedData.summary || [],
+                        fixtures: savedData.fixtures || [],
+                        currentStage: savedData.currentStage || 'group',
+                        championsHistory: savedData.championsHistory || [],
+                        currentMatchday: savedData.currentMatchday || 1,
+                        season: savedData.season || 1,
+                        tournamentStartDate: savedData.tournamentStartDate ? new Date(savedData.tournamentStartDate) : null,
+                        tournamentEndDate: savedData.tournamentEndDate ? new Date(savedData.tournamentEndDate) : null,
+                        finalRankings: savedData.finalRankings || []
+                    };
+                }
+                
+                renderTeams();
+                createStars();
+                
+                // Show champions league data if available
+                if (championsLeague.groups.length > 0) {
+                    renderChampionsLeagueGroups();
+                    renderChampionsLeagueFixtures();
+                    renderChampionsResultsInput();
+                    renderChampionsMatchHistory();
+                    updateTournamentProgress();
+                }
+                
+                if (championsLeague.knockout.length > 0) {
+                    renderChampionsLeagueKnockout();
+                }
+                
+                // Render archives
+                renderChampionsLeagueHistory();
+                
+                // Set up download buttons
+                setupDownloadButtons();
+                
+                console.log('Data initialized successfully');
+            } catch (error) {
+                console.error('Error initializing data:', error);
+                showNotification('Error loading saved data. Starting fresh.', 'warning');
+                // Reset to default state
+                teams = [];
+                championsLeague = {
+                    groups: [],
+                    knockout: [],
+                    summary: [],
+                    fixtures: [],
+                    currentStage: 'group',
+                    championsHistory: [],
+                    currentMatchday: 1,
+                    season: 1,
+                    tournamentStartDate: null,
+                    tournamentEndDate: null,
+                    finalRankings: []
+                };
+                saveData();
             }
-            
-            if (localStorage.getItem('championsLeague')) {
-                championsLeague = JSON.parse(localStorage.getItem('championsLeague'));
-            }
-            
-            renderTeams();
-            createStars();
-            
-            // Show champions league data if available
-            if (championsLeague.groups.length > 0) {
-                renderChampionsLeagueGroups();
-                renderChampionsLeagueFixtures();
-                renderChampionsResultsInput();
-                renderChampionsMatchHistory();
-                updateTournamentProgress();
-            }
-            
-            if (championsLeague.knockout.length > 0) {
-                renderChampionsLeagueKnockout();
-            }
-            
-            // Render archives
-            renderChampionsLeagueHistory();
-            
-            // Set up download buttons
-            setupDownloadButtons();
         }
         
         // Save data to localStorage
         function saveData() {
-            localStorage.setItem('championsLeagueTeams', JSON.stringify(teams));
-            localStorage.setItem('championsLeague', JSON.stringify(championsLeague));
+            try {
+                localStorage.setItem('championsLeagueTeams', JSON.stringify(teams));
+                localStorage.setItem('championsLeague', JSON.stringify(championsLeague));
+            } catch (error) {
+                console.error('Error saving data:', error);
+                showNotification('Error saving data to storage', 'danger');
+            }
         }
         
         // Show notification
@@ -2230,8 +2272,6 @@
                     // Keep the original matchday number
                     fixture.matchday = md;
                 });
-                
-                console.log(`Matchday ${md}: ${matchdayFixtures.length} fixtures on ${fixtureDate.toDateString()}`);
             }
             
             // Verify no team plays twice on the same day
@@ -2408,85 +2448,12 @@
             });
         }
         
-        // Save Champions League result
-        function saveChampionsResult(fixtureId, homeScore, awayScore) {
-            const fixture = championsLeague.fixtures.find(f => f.id === fixtureId);
-            if (!fixture) return;
-            
-            // Check if matchday is current or past
-            const fixtureDate = new Date(fixture.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            if (fixtureDate > today) {
-                showNotification('Cannot enter results for future matches!', 'danger');
-                return;
-            }
-            
-            fixture.homeScore = homeScore;
-            fixture.awayScore = awayScore;
-            fixture.completed = true;
-            
-            // Update team stats in the group
-            const group = championsLeague.groups.find(g => g.name === fixture.group);
-            if (!group) return;
-            
-            const homeTeam = group.teams.find(t => t.id === fixture.homeTeam);
-            const awayTeam = group.teams.find(t => t.id === fixture.awayTeam);
-            
-            if (!homeTeam || !awayTeam) return;
-            
-            // Update matches played
-            homeTeam.played++;
-            awayTeam.played++;
-            
-            // Update goals
-            homeTeam.goalsFor += homeScore;
-            homeTeam.goalsAgainst += awayScore;
-            awayTeam.goalsFor += awayScore;
-            awayTeam.goalsAgainst += homeScore;
-            
-            // Update goal difference
-            homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
-            awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
-            
-            // Update results and points
-            if (homeScore > awayScore) {
-                // Home team wins
-                homeTeam.wins++;
-                awayTeam.losses++;
-                homeTeam.points += 3;
-            } else if (homeScore < awayScore) {
-                // Away team wins
-                homeTeam.losses++;
-                awayTeam.wins++;
-                awayTeam.points += 3;
-            } else {
-                // Draw
-                homeTeam.draws++;
-                awayTeam.draws++;
-                homeTeam.points += 1;
-                awayTeam.points += 1;
-            }
-            
-            saveData();
-            renderChampionsLeagueGroups();
-            renderChampionsLeagueFixtures();
-            renderChampionsResultsInput();
-            renderChampionsMatchHistory();
-            updateTournamentProgress();
-            
-            showNotification('Champions League result saved successfully!');
-            
-            // Check if all group stage matches are completed
-            checkGroupStageCompletion();
-        }
-        
-        // Render Champions League results input
+        // Render Champions League results input - FIXED VERSION
         function renderChampionsResultsInput() {
+            console.log('Rendering results input...');
             championsResultsList.innerHTML = '';
             
-            if (championsLeague.fixtures.length === 0) {
+            if (!championsLeague.fixtures || championsLeague.fixtures.length === 0) {
                 championsResultsList.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-clipboard-list"></i>
@@ -2500,11 +2467,18 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
-            const currentMatchdayFixtures = championsLeague.fixtures.filter(f => 
-                f.matchday === championsLeague.currentMatchday && 
-                !f.completed &&
-                new Date(f.date) <= today
-            );
+            // Get fixtures for current matchday that are not completed and are today or in the past
+            const currentMatchdayFixtures = championsLeague.fixtures.filter(f => {
+                if (!f || f.completed) return false;
+                
+                const fixtureDate = f.date ? new Date(f.date) : null;
+                if (!fixtureDate) return false;
+                
+                fixtureDate.setHours(0, 0, 0, 0);
+                return fixtureDate <= today && f.matchday === championsLeague.currentMatchday;
+            });
+            
+            console.log(`Found ${currentMatchdayFixtures.length} fixtures for results input`);
             
             if (currentMatchdayFixtures.length === 0) {
                 championsResultsList.innerHTML = `
@@ -2521,7 +2495,10 @@
                 const homeTeam = teams.find(t => t.id === fixture.homeTeam);
                 const awayTeam = teams.find(t => t.id === fixture.awayTeam);
                 
-                if (!homeTeam || !awayTeam) return;
+                if (!homeTeam || !awayTeam) {
+                    console.warn('Could not find teams for fixture:', fixture);
+                    return;
+                }
                 
                 const fixtureCard = document.createElement('div');
                 fixtureCard.className = 'champions-fixture-card';
@@ -2535,7 +2512,7 @@
                             <span class="team-name">${awayTeam.name}</span>
                             <div class="team-badge">${awayTeam.name.substring(0, 2).toUpperCase()}</div>
                         </div>
-                        <div class="match-date">${formatDate(new Date(fixture.date))} • ${fixture.group || fixture.stage}</div>
+                        <div class="match-date">${fixture.date ? formatDate(new Date(fixture.date)) : 'Date TBD'} • ${fixture.group || fixture.stage || 'Group Stage'}</div>
                     </div>
                     <div class="champions-result-input">
                         <input type="number" min="0" id="champions-home-score-${fixture.id}" placeholder="0">
@@ -2552,17 +2529,114 @@
             document.querySelectorAll('.save-champions-result').forEach(button => {
                 button.addEventListener('click', function() {
                     const fixtureId = parseInt(this.getAttribute('data-fixture'));
-                    const homeScore = parseInt(document.getElementById(`champions-home-score-${fixtureId}`).value);
-                    const awayScore = parseInt(document.getElementById(`champions-away-score-${fixtureId}`).value);
+                    const homeScoreInput = document.getElementById(`champions-home-score-${fixtureId}`);
+                    const awayScoreInput = document.getElementById(`champions-away-score-${fixtureId}`);
+                    
+                    if (!homeScoreInput || !awayScoreInput) {
+                        showNotification('Error finding score inputs!', 'danger');
+                        return;
+                    }
+                    
+                    const homeScore = parseInt(homeScoreInput.value);
+                    const awayScore = parseInt(awayScoreInput.value);
                     
                     if (isNaN(homeScore) || isNaN(awayScore)) {
                         showNotification('Please enter valid scores for both teams!', 'danger');
                         return;
                     }
                     
+                    if (homeScore < 0 || awayScore < 0) {
+                        showNotification('Scores cannot be negative!', 'danger');
+                        return;
+                    }
+                    
                     saveChampionsResult(fixtureId, homeScore, awayScore);
                 });
             });
+            
+            console.log('Results input rendered successfully');
+        }
+        
+        // Save Champions League result
+        function saveChampionsResult(fixtureId, homeScore, awayScore) {
+            console.log(`Saving result for fixture ${fixtureId}: ${homeScore}-${awayScore}`);
+            
+            const fixture = championsLeague.fixtures.find(f => f.id === fixtureId);
+            if (!fixture) {
+                showNotification('Fixture not found!', 'danger');
+                return;
+            }
+            
+            // Check if matchday is current or past
+            const fixtureDate = fixture.date ? new Date(fixture.date) : new Date();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            fixtureDate.setHours(0, 0, 0, 0);
+            
+            if (fixtureDate > today) {
+                showNotification('Cannot enter results for future matches!', 'danger');
+                return;
+            }
+            
+            fixture.homeScore = homeScore;
+            fixture.awayScore = awayScore;
+            fixture.completed = true;
+            
+            // Update team stats in the group
+            if (fixture.stage === 'group') {
+                const group = championsLeague.groups.find(g => g.name === fixture.group);
+                if (group) {
+                    const homeTeam = group.teams.find(t => t.id === fixture.homeTeam);
+                    const awayTeam = group.teams.find(t => t.id === fixture.awayTeam);
+                    
+                    if (homeTeam && awayTeam) {
+                        // Update matches played
+                        homeTeam.played++;
+                        awayTeam.played++;
+                        
+                        // Update goals
+                        homeTeam.goalsFor += homeScore;
+                        homeTeam.goalsAgainst += awayScore;
+                        awayTeam.goalsFor += awayScore;
+                        awayTeam.goalsAgainst += homeScore;
+                        
+                        // Update goal difference
+                        homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
+                        awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
+                        
+                        // Update results and points
+                        if (homeScore > awayScore) {
+                            // Home team wins
+                            homeTeam.wins++;
+                            awayTeam.losses++;
+                            homeTeam.points += 3;
+                        } else if (homeScore < awayScore) {
+                            // Away team wins
+                            homeTeam.losses++;
+                            awayTeam.wins++;
+                            awayTeam.points += 3;
+                        } else {
+                            // Draw
+                            homeTeam.draws++;
+                            awayTeam.draws++;
+                            homeTeam.points += 1;
+                            awayTeam.points += 1;
+                        }
+                    }
+                }
+            }
+            
+            saveData();
+            renderChampionsLeagueGroups();
+            renderChampionsLeagueFixtures();
+            renderChampionsResultsInput(); // This should now work without freezing
+            renderChampionsMatchHistory();
+            updateTournamentProgress();
+            
+            showNotification('Champions League result saved successfully!');
+            
+            // Check if all group stage matches are completed
+            checkGroupStageCompletion();
         }
         
         // Render Champions League match history
@@ -3668,7 +3742,7 @@
             return date.toLocaleDateString('en-US', options);
         }
         
-        // Tab switching
+        // Tab switching - FIXED VERSION
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
                 const tabId = this.getAttribute('data-tab');
@@ -3677,6 +3751,8 @@
         });
         
         function switchTab(tabId) {
+            console.log(`Switching to tab: ${tabId}`);
+            
             // Update active tab
             tabs.forEach(tab => {
                 if (tab.getAttribute('data-tab') === tabId) {
@@ -3690,6 +3766,15 @@
             tabContents.forEach(content => {
                 if (content.id === tabId) {
                     content.classList.add('active');
+                    
+                    // Special handling for Results tab
+                    if (tabId === 'results') {
+                        // Force refresh of results when switching to this tab
+                        setTimeout(() => {
+                            renderChampionsResultsInput();
+                            renderChampionsMatchHistory();
+                        }, 100);
+                    }
                 } else {
                     content.classList.remove('active');
                 }
@@ -3884,7 +3969,20 @@
         
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
-            initializeData();
+            try {
+                initializeData();
+                
+                // Add global error handler to prevent freezing
+                window.addEventListener('error', function(e) {
+                    console.error('Global error:', e.error);
+                    showNotification('An error occurred. Please refresh the page.', 'danger');
+                });
+                
+                console.log('Champions League Manager initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize application:', error);
+                showNotification('Failed to initialize application. Please refresh the page.', 'danger');
+            }
         });
     </script>
 </body>
