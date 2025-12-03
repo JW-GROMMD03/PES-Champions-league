@@ -1181,8 +1181,6 @@
         const teamForm = document.getElementById('team-form');
         const teamsList = document.getElementById('teams-list');
         const teamsCount = document.getElementById('teams-count');
-        const generateGroupsBtn = document.getElementById('generate-groups');
-        const clearTeamsBtn = document.getElementById('clear-teams');
         const groupTables = document.getElementById('group-tables');
         const knockoutStage = document.getElementById('knockout-stage');
         const championsFixtures = document.getElementById('champions-fixtures');
@@ -1196,24 +1194,19 @@
         const notification = document.getElementById('notification');
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
-        const searchInput = document.getElementById('search-input');
-        const searchBtn = document.getElementById('search-btn');
-        const generateFixturesBtn = document.getElementById('generate-fixtures');
-        const simulateGroupsBtn = document.getElementById('simulate-groups');
-        const simulateKnockoutBtn = document.getElementById('simulate-knockout');
-        const generateRoundOf16Btn = document.getElementById('generate-round-of-16-btn');
-        const generateRoundOf16Container = document.getElementById('generate-round-of-16-container');
-        const generateQuarterFinalsBtn = document.getElementById('generate-quarter-finals-btn');
-        const generateQuarterFinalsContainer = document.getElementById('generate-quarter-finals-container');
-        const generateSemiFinalsBtn = document.getElementById('generate-semi-finals-btn');
-        const generateSemiFinalsContainer = document.getElementById('generate-semi-finals-container');
-        const generateFinalsBtn = document.getElementById('generate-finals-btn');
-        const generateFinalsContainer = document.getElementById('generate-finals-container');
-        const groupStageIcon = document.getElementById('group-stage-icon');
-        const groupStageProgress = document.getElementById('group-stage-progress');
-        const round16Progress = document.getElementById('round16-progress');
-        const quarterfinalsProgress = document.getElementById('quarterfinals-progress');
-        const semifinalsProgress = document.getElementById('semifinals-progress');
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM loaded. Initializing Champions League Manager...");
+            
+            // Initialize data from localStorage
+            initializeData();
+            
+            // Set up all event listeners
+            setupEventListeners();
+            
+            console.log("Application initialized successfully!");
+        });
         
         // Initialize data from localStorage
         function initializeData() {
@@ -1249,6 +1242,187 @@
             setupDownloadButtons();
         }
         
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Team form submission
+            teamForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('team-name').value;
+                const strength = parseInt(document.getElementById('team-strength').value);
+                const country = document.getElementById('team-country').value;
+                
+                if (strength < 3000) {
+                    showNotification('Team strength must be 3000 or higher!', 'danger');
+                    return;
+                }
+                
+                if (teams.some(team => team.name === name)) {
+                    showNotification('Team with this name already exists!', 'danger');
+                    return;
+                }
+                
+                const newTeam = {
+                    id: teams.length > 0 ? Math.max(...teams.map(t => t.id)) + 1 : 1,
+                    name: name,
+                    strength: strength,
+                    country: country,
+                    played: 0,
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    goalsFor: 0,
+                    goalsAgainst: 0,
+                    goalDifference: 0,
+                    points: 0,
+                    form: [],
+                    championships: 0,
+                    history: []
+                };
+                
+                teams.push(newTeam);
+                saveData();
+                renderTeams();
+                
+                teamForm.reset();
+                showNotification(`Team ${name} registered successfully!`);
+            });
+            
+            // Generate groups button
+            document.getElementById('generate-groups').addEventListener('click', function() {
+                if (teams.length < 16 || teams.length % 4 !== 0) {
+                    showNotification('Champions League requires at least 16 teams and the number must be divisible by 4! Currently registered: ' + teams.length, 'danger');
+                    return;
+                }
+                
+                generateChampionsLeagueGroups();
+                saveData();
+                
+                showNotification('Champions League groups generated!');
+                
+                // Switch to groups tab
+                switchTab('groups');
+            });
+            
+            // Clear all teams button
+            document.getElementById('clear-teams').addEventListener('click', function() {
+                if (teams.length === 0) {
+                    showNotification('No teams to clear!', 'warning');
+                    return;
+                }
+                
+                if (confirm('Are you sure you want to clear all teams? This will also reset groups and fixtures.')) {
+                    teams = [];
+                    championsLeague = {
+                        groups: [],
+                        knockout: {
+                            roundOf16: [],
+                            quarterFinals: [],
+                            semiFinals: [],
+                            thirdPlace: null,
+                            final: null
+                        },
+                        fixtures: [],
+                        currentStage: 'group',
+                        championsHistory: [],
+                        currentMatchday: 1,
+                        season: 1,
+                        tournamentStartDate: null,
+                        tournamentEndDate: null,
+                        finalRankings: []
+                    };
+                    saveData();
+                    renderTeams();
+                    renderChampionsLeagueGroups();
+                    renderChampionsLeagueFixtures();
+                    renderResultsPanel();
+                    renderChampionsLeagueKnockout();
+                    renderChampionsLeagueHistory();
+                    updateTournamentProgress();
+                    updateGroupStageStatus();
+                    updateKnockoutStageStatus();
+                    showNotification('All teams, groups, and fixtures cleared!');
+                }
+            });
+            
+            // Generate fixtures button
+            document.getElementById('generate-fixtures').addEventListener('click', function() {
+                if (championsLeague.groups.length === 0) {
+                    showNotification('Generate groups first!', 'danger');
+                    return;
+                }
+                
+                generateChampionsLeagueFixtures();
+                saveData();
+                
+                showNotification('Champions League fixtures generated!');
+                
+                // Switch to fixtures tab
+                switchTab('fixtures');
+            });
+            
+            // Simulate groups button
+            document.getElementById('simulate-groups').addEventListener('click', function() {
+                if (championsLeague.groups.length === 0) {
+                    showNotification('Generate groups first!', 'danger');
+                    return;
+                }
+                
+                simulateAllGroupMatches();
+                saveData();
+                
+                showNotification('All group matches simulated!');
+            });
+            
+            // Simulate knockout button
+            document.getElementById('simulate-knockout').addEventListener('click', function() {
+                simulateKnockoutMatches();
+                saveData();
+                
+                showNotification('Knockout matches simulated!');
+            });
+            
+            // Generate Round of 16 button - FIXED
+            document.getElementById('generate-round-of-16-btn').addEventListener('click', function() {
+                console.log("Generate Round of 16 button clicked!");
+                generateRoundOf16();
+            });
+            
+            // Generate Quarter-finals button
+            document.getElementById('generate-quarter-finals-btn').addEventListener('click', function() {
+                console.log("Generate Quarter-finals button clicked!");
+                generateQuarterFinals();
+            });
+            
+            // Generate Semi-finals button
+            document.getElementById('generate-semi-finals-btn').addEventListener('click', function() {
+                console.log("Generate Semi-finals button clicked!");
+                generateSemiFinals();
+            });
+            
+            // Generate Finals button
+            document.getElementById('generate-finals-btn').addEventListener('click', function() {
+                console.log("Generate Finals button clicked!");
+                generateFinals();
+            });
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
+            });
+            
+            // Search functionality
+            document.getElementById('search-btn').addEventListener('click', performSearch);
+            document.getElementById('search-input').addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+        }
+        
         // Save data to localStorage
         function saveData() {
             localStorage.setItem('championsLeagueTeams', JSON.stringify(teams));
@@ -1265,50 +1439,6 @@
                 notification.classList.remove('show');
             }, 4000);
         }
-        
-        // Add team
-        teamForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('team-name').value;
-            const strength = parseInt(document.getElementById('team-strength').value);
-            const country = document.getElementById('team-country').value;
-            
-            if (strength < 3000) {
-                showNotification('Team strength must be 3000 or higher!', 'danger');
-                return;
-            }
-            
-            if (teams.some(team => team.name === name)) {
-                showNotification('Team with this name already exists!', 'danger');
-                return;
-            }
-            
-            const newTeam = {
-                id: teams.length > 0 ? Math.max(...teams.map(t => t.id)) + 1 : 1,
-                name: name,
-                strength: strength,
-                country: country,
-                played: 0,
-                wins: 0,
-                draws: 0,
-                losses: 0,
-                goalsFor: 0,
-                goalsAgainst: 0,
-                goalDifference: 0,
-                points: 0,
-                form: [],
-                championships: 0,
-                history: []
-            };
-            
-            teams.push(newTeam);
-            saveData();
-            renderTeams();
-            
-            teamForm.reset();
-            showNotification(`Team ${name} registered successfully!`);
-        });
         
         // Render teams with edit and delete options
         function renderTeams() {
@@ -1422,63 +1552,6 @@
                 showNotification(`Team ${team.name} deleted successfully!`);
             }
         }
-        
-        // Clear all teams
-        clearTeamsBtn.addEventListener('click', function() {
-            if (teams.length === 0) {
-                showNotification('No teams to clear!', 'warning');
-                return;
-            }
-            
-            if (confirm('Are you sure you want to clear all teams? This will also reset groups and fixtures.')) {
-                teams = [];
-                championsLeague = {
-                    groups: [],
-                    knockout: {
-                        roundOf16: [],
-                        quarterFinals: [],
-                        semiFinals: [],
-                        thirdPlace: null,
-                        final: null
-                    },
-                    fixtures: [],
-                    currentStage: 'group',
-                    championsHistory: [],
-                    currentMatchday: 1,
-                    season: 1,
-                    tournamentStartDate: null,
-                    tournamentEndDate: null,
-                    finalRankings: []
-                };
-                saveData();
-                renderTeams();
-                renderChampionsLeagueGroups();
-                renderChampionsLeagueFixtures();
-                renderResultsPanel();
-                renderChampionsLeagueKnockout();
-                renderChampionsLeagueHistory();
-                updateTournamentProgress();
-                updateGroupStageStatus();
-                updateKnockoutStageStatus();
-                showNotification('All teams, groups, and fixtures cleared!');
-            }
-        });
-        
-        // Generate groups
-        generateGroupsBtn.addEventListener('click', function() {
-            if (teams.length < 16 || teams.length % 4 !== 0) {
-                showNotification('Champions League requires at least 16 teams and the number must be divisible by 4! Currently registered: ' + teams.length, 'danger');
-                return;
-            }
-            
-            generateChampionsLeagueGroups();
-            saveData();
-            
-            showNotification('Champions League groups generated!');
-            
-            // Switch to groups tab
-            switchTab('groups');
-        });
         
         // Generate Champions League groups
         function generateChampionsLeagueGroups() {
@@ -1606,22 +1679,6 @@
                 });
             });
         }
-        
-        // Generate fixtures
-        generateFixturesBtn.addEventListener('click', function() {
-            if (championsLeague.groups.length === 0) {
-                showNotification('Generate groups first!', 'danger');
-                return;
-            }
-            
-            generateChampionsLeagueFixtures();
-            saveData();
-            
-            showNotification('Champions League fixtures generated!');
-            
-            // Switch to fixtures tab
-            switchTab('fixtures');
-        });
         
         // Generate Champions League fixtures
         function generateChampionsLeagueFixtures() {
@@ -2032,6 +2089,10 @@
         
         // Update group stage status
         function updateGroupStageStatus() {
+            const groupStageIcon = document.getElementById('group-stage-icon');
+            const groupStageProgress = document.getElementById('group-stage-progress');
+            const generateRoundOf16Container = document.getElementById('generate-round-of-16-container');
+            
             if (championsLeague.groups.length === 0) {
                 groupStageProgress.textContent = '0/6 matchdays completed';
                 generateRoundOf16Container.classList.add('hidden');
@@ -2069,6 +2130,8 @@
         function updateKnockoutStageStatus() {
             // Update Round of 16 status
             const round16StatusIcon = document.getElementById('round16-status-icon');
+            const round16Progress = document.getElementById('round16-progress');
+            const generateQuarterFinalsContainer = document.getElementById('generate-quarter-finals-container');
             const round16Fixtures = championsLeague.knockout.roundOf16;
             const completedRound16 = round16Fixtures.filter(f => f.completed).length;
             
@@ -2086,6 +2149,8 @@
             
             // Update Quarter-finals status
             const quarterfinalsStatusIcon = document.getElementById('quarterfinals-status-icon');
+            const quarterfinalsProgress = document.getElementById('quarterfinals-progress');
+            const generateSemiFinalsContainer = document.getElementById('generate-semi-finals-container');
             const quarterfinalsFixtures = championsLeague.knockout.quarterFinals;
             const completedQuarterfinals = quarterfinalsFixtures.filter(f => f.completed).length;
             
@@ -2103,6 +2168,8 @@
             
             // Update Semi-finals status
             const semifinalsStatusIcon = document.getElementById('semifinals-status-icon');
+            const semifinalsProgress = document.getElementById('semifinals-progress');
+            const generateFinalsContainer = document.getElementById('generate-finals-container');
             const semifinalsFixtures = championsLeague.knockout.semiFinals;
             const completedSemifinals = semifinalsFixtures.filter(f => f.completed).length;
             
@@ -2119,6 +2186,7 @@
             }
             
             // Show/hide simulate knockout button
+            const simulateKnockoutBtn = document.getElementById('simulate-knockout');
             if (round16Fixtures.length > 0 || quarterfinalsFixtures.length > 0 || 
                 semifinalsFixtures.length > 0 || championsLeague.knockout.final || championsLeague.knockout.thirdPlace) {
                 simulateKnockoutBtn.style.display = 'block';
@@ -2127,19 +2195,37 @@
             }
         }
         
-        // Generate Round of 16
-        generateRoundOf16Btn.addEventListener('click', generateRoundOf16);
-        
+        // Generate Round of 16 - FIXED FUNCTION
         function generateRoundOf16() {
+            console.log("Starting to generate Round of 16...");
+            
+            // Check if we have groups
+            if (championsLeague.groups.length === 0) {
+                showNotification('No groups found! Generate groups first.', 'danger');
+                return;
+            }
+            
+            // Check if all group matches are completed
+            const groupStageFixtures = championsLeague.fixtures.filter(f => f.stage === 'group');
+            const completedGroupFixtures = groupStageFixtures.filter(f => f.completed).length;
+            const totalGroupFixtures = groupStageFixtures.length;
+            
+            if (completedGroupFixtures !== totalGroupFixtures) {
+                showNotification('Not all group stage matches are completed!', 'danger');
+                return;
+            }
+            
             // Get qualified teams (top 2 from each group)
             const qualifiedTeams = [];
             championsLeague.groups.forEach(group => {
+                // Sort teams by points, goal difference, goals for
                 const sortedTeams = [...group.teams].sort((a, b) => {
                     if (b.points !== a.points) return b.points - a.points;
                     if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
                     return b.goalsFor - a.goalsFor;
                 });
                 
+                // Add top 2 teams
                 qualifiedTeams.push({
                     team: sortedTeams[0],
                     position: 1,
@@ -2151,13 +2237,18 @@
                 });
             });
             
-            // Shuffle teams for random draw (keeping #1 vs #2 from different groups)
+            console.log("Qualified teams:", qualifiedTeams.map(t => ({name: t.team.name, group: t.group, position: t.position})));
+            
+            // Shuffle for random draw (keeping #1 vs #2 from different groups)
             const groupWinners = qualifiedTeams.filter(t => t.position === 1);
             const groupRunnersUp = qualifiedTeams.filter(t => t.position === 2);
             
             // Shuffle both arrays
             groupWinners.sort(() => 0.5 - Math.random());
             groupRunnersUp.sort(() => 0.5 - Math.random());
+            
+            console.log("Group winners:", groupWinners.map(t => t.team.name));
+            console.log("Group runners-up:", groupRunnersUp.map(t => t.team.name));
             
             // Create Round of 16 matches
             championsLeague.knockout.roundOf16 = [];
@@ -2184,25 +2275,34 @@
                 
                 championsLeague.knockout.roundOf16.push(match);
                 championsLeague.fixtures.push(match);
+                
+                console.log(`Match ${i+1}: ${homeTeam.name} vs ${awayTeam.name}`);
             }
             
+            // SAVE THE DATA
             saveData();
+            console.log("Data saved to localStorage");
+            
+            // UPDATE ALL DISPLAYS
             renderChampionsLeagueKnockout();
             renderChampionsLeagueFixtures();
             renderResultsPanel();
             updateTournamentProgress();
             updateKnockoutStageStatus();
             
-            showNotification('Round of 16 generated!', 'success');
+            // SHOW SUCCESS MESSAGE
+            showNotification('Round of 16 generated successfully! Check Knockout Stage tab.', 'success');
             
-            // Switch to knockout tab
+            // SWITCH TO KNOCKOUT TAB
             switchTab('knockout');
+            
+            console.log("Round of 16 generation completed!");
         }
         
         // Generate Quarter-finals
-        generateQuarterFinalsBtn.addEventListener('click', generateQuarterFinals);
-        
         function generateQuarterFinals() {
+            console.log("Starting to generate Quarter-finals...");
+            
             // Get winners from Round of 16
             const roundOf16Winners = championsLeague.knockout.roundOf16
                 .filter(match => match.winner)
@@ -2213,6 +2313,8 @@
                 showNotification('Not all Round of 16 matches have winners!', 'danger');
                 return;
             }
+            
+            console.log("Round of 16 winners:", roundOf16Winners.map(t => t.name));
             
             // Shuffle winners for random draw
             const shuffledWinners = [...roundOf16Winners].sort(() => 0.5 - Math.random());
@@ -2242,6 +2344,8 @@
                 
                 championsLeague.knockout.quarterFinals.push(match);
                 championsLeague.fixtures.push(match);
+                
+                console.log(`Quarter-final ${i+1}: ${homeTeam.name} vs ${awayTeam.name}`);
             }
             
             saveData();
@@ -2255,9 +2359,9 @@
         }
         
         // Generate Semi-finals
-        generateSemiFinalsBtn.addEventListener('click', generateSemiFinals);
-        
         function generateSemiFinals() {
+            console.log("Starting to generate Semi-finals...");
+            
             // Get winners from Quarter-finals
             const quarterFinalWinners = championsLeague.knockout.quarterFinals
                 .filter(match => match.winner)
@@ -2268,6 +2372,8 @@
                 showNotification('Not all quarter-final matches have winners!', 'danger');
                 return;
             }
+            
+            console.log("Quarter-final winners:", quarterFinalWinners.map(t => t.name));
             
             // Shuffle winners for random draw
             const shuffledWinners = [...quarterFinalWinners].sort(() => 0.5 - Math.random());
@@ -2297,6 +2403,8 @@
                 
                 championsLeague.knockout.semiFinals.push(match);
                 championsLeague.fixtures.push(match);
+                
+                console.log(`Semi-final ${i+1}: ${homeTeam.name} vs ${awayTeam.name}`);
             }
             
             saveData();
@@ -2310,9 +2418,9 @@
         }
         
         // Generate Finals (both final and third-place playoff)
-        generateFinalsBtn.addEventListener('click', generateFinals);
-        
         function generateFinals() {
+            console.log("Starting to generate Finals...");
+            
             // Get winners and losers from Semi-finals
             const semiFinalWinners = championsLeague.knockout.semiFinals
                 .filter(match => match.winner)
@@ -2328,6 +2436,9 @@
                 showNotification('Not all semi-final matches have results!', 'danger');
                 return;
             }
+            
+            console.log("Semi-final winners:", semiFinalWinners.map(t => t.name));
+            console.log("Semi-final losers:", semiFinalLosers.map(t => t.name));
             
             // Create Final match
             const homeTeam = semiFinalWinners[0];
@@ -2374,6 +2485,9 @@
             
             championsLeague.knockout.thirdPlace = thirdPlaceMatch;
             championsLeague.fixtures.push(thirdPlaceMatch);
+            
+            console.log("Final:", homeTeam.name, "vs", awayTeam.name);
+            console.log("Third-place playoff:", thirdHomeTeam.name, "vs", thirdAwayTeam.name);
             
             saveData();
             renderChampionsLeagueKnockout();
@@ -2889,19 +3003,6 @@
             showNotification('Result removed. You can now enter the correct result.', 'warning');
         }
         
-        // Simulate group matches
-        simulateGroupsBtn.addEventListener('click', function() {
-            if (championsLeague.groups.length === 0) {
-                showNotification('Generate groups first!', 'danger');
-                return;
-            }
-            
-            simulateAllGroupMatches();
-            saveData();
-            
-            showNotification('All group matches simulated!');
-        });
-        
         // Simulate all group matches
         function simulateAllGroupMatches() {
             const today = new Date();
@@ -2945,14 +3046,6 @@
                 }
             });
         }
-        
-        // Simulate knockout stage
-        simulateKnockoutBtn.addEventListener('click', function() {
-            simulateKnockoutMatches();
-            saveData();
-            
-            showNotification('Knockout matches simulated!');
-        });
         
         // Simulate knockout matches
         function simulateKnockoutMatches() {
@@ -3560,13 +3653,6 @@
         }
         
         // Tab switching
-        tabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                const tabId = this.getAttribute('data-tab');
-                switchTab(tabId);
-            });
-        });
-        
         function switchTab(tabId) {
             // Update active tab
             tabs.forEach(tab => {
@@ -3588,15 +3674,8 @@
         }
         
         // Search functionality
-        searchBtn.addEventListener('click', performSearch);
-        searchInput.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
-        
         function performSearch() {
-            const query = searchInput.value.trim().toLowerCase();
+            const query = document.getElementById('search-input').value.trim().toLowerCase();
             
             if (query === '') {
                 showNotification('Please enter a search term!', 'warning');
@@ -3679,11 +3758,6 @@
                 container.removeChild(searchResultsCard);
             });
         }
-        
-        // Initialize the application
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeData();
-        });
     </script>
 </body>
 </html>
