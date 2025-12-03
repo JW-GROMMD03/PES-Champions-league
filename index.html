@@ -962,7 +962,7 @@
                 <h2 class="card-title champions-league-title">Champions League Group Stage</h2>
                 <div class="stage-completion-check" id="group-stage-status">
                     <div class="stage-status">
-                        <i class="fas fa-check-circle stage-pending"></i>
+                        <i class="fas fa-check-circle stage-pending" id="group-stage-icon"></i>
                         <span>Group Stage: <span id="group-stage-progress">0/6 matchdays completed</span></span>
                     </div>
                     <div id="generate-round-of-16-container" class="generate-button-container hidden">
@@ -1209,6 +1209,11 @@
         const generateSemiFinalsContainer = document.getElementById('generate-semi-finals-container');
         const generateFinalsBtn = document.getElementById('generate-finals-btn');
         const generateFinalsContainer = document.getElementById('generate-finals-container');
+        const groupStageIcon = document.getElementById('group-stage-icon');
+        const groupStageProgress = document.getElementById('group-stage-progress');
+        const round16Progress = document.getElementById('round16-progress');
+        const quarterfinalsProgress = document.getElementById('quarterfinals-progress');
+        const semifinalsProgress = document.getElementById('semifinals-progress');
         
         // Initialize data from localStorage
         function initializeData() {
@@ -2027,12 +2032,11 @@
         
         // Update group stage status
         function updateGroupStageStatus() {
-            const groupStageStatus = document.getElementById('group-stage-status');
-            const groupStageProgress = document.getElementById('group-stage-progress');
-            
             if (championsLeague.groups.length === 0) {
                 groupStageProgress.textContent = '0/6 matchdays completed';
                 generateRoundOf16Container.classList.add('hidden');
+                groupStageIcon.classList.remove('stage-completed');
+                groupStageIcon.classList.add('stage-pending');
                 return;
             }
             
@@ -2046,17 +2050,15 @@
             // Check if all group stage matches are completed
             if (completedFixtures === totalFixtures && totalFixtures > 0) {
                 // Update status icon
-                const statusIcon = groupStageStatus.querySelector('.stage-status i');
-                statusIcon.classList.remove('stage-pending');
-                statusIcon.classList.add('stage-completed');
+                groupStageIcon.classList.remove('stage-pending');
+                groupStageIcon.classList.add('stage-completed');
                 
                 // Show generate button
                 generateRoundOf16Container.classList.remove('hidden');
             } else {
                 // Update status icon
-                const statusIcon = groupStageStatus.querySelector('.stage-status i');
-                statusIcon.classList.remove('stage-completed');
-                statusIcon.classList.add('stage-pending');
+                groupStageIcon.classList.remove('stage-completed');
+                groupStageIcon.classList.add('stage-pending');
                 
                 // Hide generate button
                 generateRoundOf16Container.classList.add('hidden');
@@ -2067,7 +2069,6 @@
         function updateKnockoutStageStatus() {
             // Update Round of 16 status
             const round16StatusIcon = document.getElementById('round16-status-icon');
-            const round16Progress = document.getElementById('round16-progress');
             const round16Fixtures = championsLeague.knockout.roundOf16;
             const completedRound16 = round16Fixtures.filter(f => f.completed).length;
             
@@ -2085,7 +2086,6 @@
             
             // Update Quarter-finals status
             const quarterfinalsStatusIcon = document.getElementById('quarterfinals-status-icon');
-            const quarterfinalsProgress = document.getElementById('quarterfinals-progress');
             const quarterfinalsFixtures = championsLeague.knockout.quarterFinals;
             const completedQuarterfinals = quarterfinalsFixtures.filter(f => f.completed).length;
             
@@ -2103,7 +2103,6 @@
             
             // Update Semi-finals status
             const semifinalsStatusIcon = document.getElementById('semifinals-status-icon');
-            const semifinalsProgress = document.getElementById('semifinals-progress');
             const semifinalsFixtures = championsLeague.knockout.semiFinals;
             const completedSemifinals = semifinalsFixtures.filter(f => f.completed).length;
             
@@ -2195,6 +2194,9 @@
             updateKnockoutStageStatus();
             
             showNotification('Round of 16 generated!', 'success');
+            
+            // Switch to knockout tab
+            switchTab('knockout');
         }
         
         // Generate Quarter-finals
