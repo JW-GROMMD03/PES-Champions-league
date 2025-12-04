@@ -2130,25 +2130,9 @@
             }
         }
         
-        // Add a loading effect to the buttons
-        function addButtonLoading(button) {
-            const originalText = button.textContent;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-            button.disabled = true;
-            
-            return function() {
-                button.innerHTML = originalText;
-                button.disabled = false;
-            };
-        }
-        
-        // Generate Round of 16 with notification and redirect
+        // Generate Round of 16
         generateRoundOf16Btn.addEventListener('click', function() {
-            const resetButton = addButtonLoading(this);
-            setTimeout(() => {
-                generateRoundOf16();
-                resetButton();
-            }, 500);
+            generateRoundOf16();
         });
         
         function generateRoundOf16() {
@@ -2217,22 +2201,20 @@
             // Show success notification and redirect
             showNotification('Round of 16 fixtures generated successfully!', 'success');
             
-            // Redirect to knockout tab after a short delay
+            // Redirect to knockout tab
             setTimeout(() => {
                 switchTab('knockout');
-                // Scroll to the Round of 16 section
+                // Scroll to the knockout stage
                 const knockoutStage = document.getElementById('knockout-stage');
-                knockoutStage.scrollIntoView({ behavior: 'smooth' });
-            }, 1500);
+                if (knockoutStage) {
+                    knockoutStage.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 500);
         }
         
-        // Generate Quarter-finals with notification and redirect
+        // Generate Quarter-finals
         generateQuarterFinalsBtn.addEventListener('click', function() {
-            const resetButton = addButtonLoading(this);
-            setTimeout(() => {
-                generateQuarterFinals();
-                resetButton();
-            }, 500);
+            generateQuarterFinals();
         });
         
         function generateQuarterFinals() {
@@ -2243,7 +2225,7 @@
                 .filter(Boolean);
             
             if (roundOf16Winners.length !== 8) {
-                showNotification('Not all Round of 16 matches have winners!', 'danger');
+                showNotification('Not all Round of 16 matches have winners! Please complete all Round of 16 matches first.', 'danger');
                 return;
             }
             
@@ -2287,22 +2269,20 @@
             // Show success notification and redirect
             showNotification('Quarter-finals fixtures generated successfully!', 'success');
             
-            // Redirect to knockout tab after a short delay
+            // Redirect to knockout tab
             setTimeout(() => {
                 switchTab('knockout');
-                // Scroll to the Quarter-finals section
+                // Scroll to the knockout stage
                 const knockoutStage = document.getElementById('knockout-stage');
-                knockoutStage.scrollIntoView({ behavior: 'smooth' });
-            }, 1500);
+                if (knockoutStage) {
+                    knockoutStage.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 500);
         }
         
-        // Generate Semi-finals with notification and redirect
+        // Generate Semi-finals
         generateSemiFinalsBtn.addEventListener('click', function() {
-            const resetButton = addButtonLoading(this);
-            setTimeout(() => {
-                generateSemiFinals();
-                resetButton();
-            }, 500);
+            generateSemiFinals();
         });
         
         function generateSemiFinals() {
@@ -2313,7 +2293,7 @@
                 .filter(Boolean);
             
             if (quarterFinalWinners.length !== 4) {
-                showNotification('Not all quarter-final matches have winners!', 'danger');
+                showNotification('Not all quarter-final matches have winners! Please complete all quarter-final matches first.', 'danger');
                 return;
             }
             
@@ -2357,22 +2337,20 @@
             // Show success notification and redirect
             showNotification('Semi-finals fixtures generated successfully!', 'success');
             
-            // Redirect to knockout tab after a short delay
+            // Redirect to knockout tab
             setTimeout(() => {
                 switchTab('knockout');
-                // Scroll to the Semi-finals section
+                // Scroll to the knockout stage
                 const knockoutStage = document.getElementById('knockout-stage');
-                knockoutStage.scrollIntoView({ behavior: 'smooth' });
-            }, 1500);
+                if (knockoutStage) {
+                    knockoutStage.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 500);
         }
         
-        // Generate Finals with notification and redirect (includes third-place playoff)
+        // Generate Finals
         generateFinalsBtn.addEventListener('click', function() {
-            const resetButton = addButtonLoading(this);
-            setTimeout(() => {
-                generateFinals();
-                resetButton();
-            }, 500);
+            generateFinals();
         });
         
         function generateFinals() {
@@ -2388,7 +2366,7 @@
                 .filter(Boolean);
             
             if (semiFinalWinners.length !== 2 || semiFinalLosers.length !== 2) {
-                showNotification('Not all semi-final matches have results!', 'danger');
+                showNotification('Not all semi-final matches have results! Please complete all semi-final matches first.', 'danger');
                 return;
             }
             
@@ -2448,13 +2426,15 @@
             // Show success notification and redirect
             showNotification('Finals generated successfully! Includes both Final and Third-place playoff.', 'success');
             
-            // Redirect to knockout tab after a short delay
+            // Redirect to knockout tab
             setTimeout(() => {
                 switchTab('knockout');
-                // Scroll to the Finals section
+                // Scroll to the knockout stage
                 const knockoutStage = document.getElementById('knockout-stage');
-                knockoutStage.scrollIntoView({ behavior: 'smooth' });
-            }, 1500);
+                if (knockoutStage) {
+                    knockoutStage.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 500);
         }
         
         // Render Champions League knockout stage
@@ -3759,4 +3739,3 @@
     </script>
 </body>
 </html>
-
