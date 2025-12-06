@@ -398,6 +398,63 @@
             border-left: 3px solid var(--gray);
         }
         
+        /* NEW STYLES FOR BETTER VISIBILITY */
+        .stage-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stage-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stage-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stage-icon {
+            font-size: 1.5rem;
+        }
+        
+        .stage-progress {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-bottom: 10px;
+        }
+        
+        .stage-button {
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .all-knockout-buttons {
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+        
+        .all-knockout-buttons h3 {
+            color: var(--gold);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -413,6 +470,10 @@
             
             .match-teams {
                 flex-direction: column;
+            }
+            
+            .stage-controls {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -488,21 +549,26 @@
             <div class="card champions-league-card">
                 <h2 class="card-title champions-league-title">Champions League Group Stage</h2>
                 
-                <div id="group-stage-status" style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <i class="fas fa-check-circle" id="group-stage-icon" style="color: var(--warning);"></i>
-                        <span>Group Stage: <span id="group-stage-progress">0/6 matches per team</span></span>
-                    </div>
-                    <div id="generate-round-of-16-container" class="generate-button-container hidden">
-                        <button id="generate-round-of-16-btn" class="btn-gold">Generate Round of 16</button>
+                <div class="stage-controls">
+                    <div class="stage-card">
+                        <div class="stage-header">
+                            <i class="fas fa-check-circle stage-icon" id="group-stage-icon" style="color: var(--warning);"></i>
+                            <h3>Group Stage</h3>
+                        </div>
+                        <div class="stage-progress" id="group-stage-progress">0/6 matches per team</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button id="generate-fixtures" class="btn-gold">Generate Fixtures</button>
+                            <button id="simulate-groups" class="btn-secondary">Simulate All</button>
+                        </div>
+                        <div id="generate-round-of-16-container" class="generate-button-container hidden">
+                            <button id="generate-round-of-16-btn" class="btn-gold stage-button">Generate Round of 16</button>
+                        </div>
                     </div>
                 </div>
                 
                 <div id="group-tables"></div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button id="generate-fixtures" class="btn-gold">Generate Fixtures (Single Leg)</button>
-                    <button id="simulate-groups" class="btn-secondary">Simulate All Group Matches</button>
                     <button id="quick-simulate-all" class="btn-secondary">Quick Simulate Everything</button>
                 </div>
             </div>
@@ -513,35 +579,49 @@
             <div class="card champions-league-card">
                 <h2 class="card-title champions-league-title">Knockout Stage</h2>
                 
-                <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px;">
-                    <div style="margin-bottom: 15px;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                            <i class="fas fa-check-circle" id="round16-status-icon" style="color: var(--warning);"></i>
-                            <span>Round of 16: <span id="round16-progress">Not started</span></span>
+                <div class="stage-controls">
+                    <div class="stage-card">
+                        <div class="stage-header">
+                            <i class="fas fa-check-circle stage-icon" id="round16-status-icon" style="color: var(--warning);"></i>
+                            <h3>Round of 16</h3>
                         </div>
-                        <div id="generate-quarter-finals-container" class="generate-button-container hidden">
-                            <button id="generate-quarter-finals-btn" class="btn-gold">Generate Quarter-finals</button>
-                        </div>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                            <i class="fas fa-check-circle" id="quarterfinals-status-icon" style="color: var(--warning);"></i>
-                            <span>Quarter-finals: <span id="quarterfinals-progress">Not started</span></span>
-                        </div>
-                        <div id="generate-semi-finals-container" class="generate-button-container hidden">
-                            <button id="generate-semi-finals-btn" class="btn-gold">Generate Semi-finals</button>
+                        <div class="stage-progress" id="round16-progress">Not started</div>
+                        <div id="generate-quarter-finals-container" class="generate-button-container">
+                            <button id="generate-quarter-finals-btn" class="btn-gold stage-button">Generate Quarter-finals</button>
                         </div>
                     </div>
                     
-                    <div style="margin-bottom: 15px;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                            <i class="fas fa-check-circle" id="semifinals-status-icon" style="color: var(--warning);"></i>
-                            <span>Semi-finals: <span id="semifinals-progress">Not started</span></span>
+                    <div class="stage-card">
+                        <div class="stage-header">
+                            <i class="fas fa-check-circle stage-icon" id="quarterfinals-status-icon" style="color: var(--warning);"></i>
+                            <h3>Quarter-finals</h3>
                         </div>
-                        <div id="generate-finals-container" class="generate-button-container hidden">
-                            <button id="generate-finals-btn" class="btn-gold">Generate Finals</button>
+                        <div class="stage-progress" id="quarterfinals-progress">Not started</div>
+                        <div id="generate-semi-finals-container" class="generate-button-container">
+                            <button id="generate-semi-finals-btn" class="btn-gold stage-button">Generate Semi-finals</button>
                         </div>
+                    </div>
+                    
+                    <div class="stage-card">
+                        <div class="stage-header">
+                            <i class="fas fa-check-circle stage-icon" id="semifinals-status-icon" style="color: var(--warning);"></i>
+                            <h3>Semi-finals</h3>
+                        </div>
+                        <div class="stage-progress" id="semifinals-progress">Not started</div>
+                        <div id="generate-finals-container" class="generate-button-container">
+                            <button id="generate-finals-btn" class="btn-gold stage-button">Generate Finals</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- NEW: All Knockout Buttons Section -->
+                <div class="all-knockout-buttons">
+                    <h3>Generate All Knockout Stages</h3>
+                    <div class="buttons-grid">
+                        <button id="force-round16" class="btn-gold">Force Round of 16</button>
+                        <button id="force-quarterfinals" class="btn-gold">Force Quarter-finals</button>
+                        <button id="force-semifinals" class="btn-gold">Force Semi-finals</button>
+                        <button id="force-finals" class="btn-gold">Force Finals</button>
                     </div>
                 </div>
                 
@@ -554,7 +634,8 @@
                 </div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button id="simulate-knockout" class="btn-secondary hidden">Simulate Current Round</button>
+                    <button id="simulate-knockout" class="btn-secondary">Simulate Current Round</button>
+                    <button id="simulate-all-knockout" class="btn-secondary">Simulate All Knockout</button>
                 </div>
             </div>
         </div>
@@ -636,6 +717,7 @@
         const generateFinalsBtn = document.getElementById('generate-finals-btn');
         const generateFinalsContainer = document.getElementById('generate-finals-container');
         const simulateKnockoutBtn = document.getElementById('simulate-knockout');
+        const simulateAllKnockoutBtn = document.getElementById('simulate-all-knockout');
         const currentResultsList = document.getElementById('current-results-list');
         const matchHistoryList = document.getElementById('match-history-list');
         const resultsStageSelect = document.getElementById('results-stage-select');
@@ -650,6 +732,12 @@
         const notification = document.getElementById('notification');
         const tabs = document.querySelectorAll('.tab');
         const tabContents = document.querySelectorAll('.tab-content');
+        
+        // NEW: Force generation buttons
+        const forceRound16Btn = document.getElementById('force-round16');
+        const forceQuarterfinalsBtn = document.getElementById('force-quarterfinals');
+        const forceSemifinalsBtn = document.getElementById('force-semifinals');
+        const forceFinalsBtn = document.getElementById('force-finals');
         
         // Initialize
         function initializeData() {
@@ -680,9 +768,14 @@
                 updateGroupStageStatus();
             }
             
-            if (championsLeague.knockout.roundOf16.length > 0) {
+            updateKnockoutStageStatus();
+            
+            // Show knockout stage if it exists
+            if (championsLeague.knockout.roundOf16.length > 0 || 
+                championsLeague.knockout.quarterFinals.length > 0 || 
+                championsLeague.knockout.semiFinals.length > 0 || 
+                championsLeague.knockout.final) {
                 renderChampionsLeagueKnockout();
-                updateKnockoutStageStatus();
             }
             
             renderResultsPanel();
@@ -1047,6 +1140,25 @@
         // KNOCKOUT STAGE - TWO LEG WITH AGGREGATE
         generateRoundOf16Btn.addEventListener('click', generateRoundOf16);
         
+        // NEW: Force Round of 16 button
+        forceRound16Btn.addEventListener('click', function() {
+            if (teams.length < 16) {
+                showNotification('Need 16 teams!', 'danger');
+                return;
+            }
+            
+            if (championsLeague.groups.length === 0) {
+                generateChampionsLeagueGroups();
+            }
+            
+            if (championsLeague.fixtures.length === 0) {
+                generateChampionsLeagueFixtures();
+                simulateAllGroupMatches();
+            }
+            
+            generateRoundOf16();
+        });
+        
         function generateRoundOf16() {
             console.log("Generating Round of 16...");
             
@@ -1217,7 +1329,58 @@
         
         generateQuarterFinalsBtn.addEventListener('click', generateQuarterFinals);
         
+        // NEW: Force Quarter-finals button
+        forceQuarterfinalsBtn.addEventListener('click', function() {
+            if (championsLeague.knockout.roundOf16.length === 0) {
+                // If no round of 16, create it with simulated results
+                if (teams.length < 16) {
+                    showNotification('Need 16 teams!', 'danger');
+                    return;
+                }
+                
+                if (championsLeague.groups.length === 0) {
+                    generateChampionsLeagueGroups();
+                    generateChampionsLeagueFixtures();
+                    simulateAllGroupMatches();
+                }
+                
+                generateRoundOf16();
+                
+                // Simulate round of 16 matches
+                setTimeout(() => {
+                    championsLeague.knockout.roundOf16.forEach(match => {
+                        if (!match.leg1.completed) simulateMatch(match.leg1);
+                        if (!match.leg2.completed) simulateMatch(match.leg2);
+                    });
+                    
+                    setTimeout(() => {
+                        generateQuarterFinals();
+                    }, 500);
+                }, 500);
+            } else {
+                generateQuarterFinals();
+            }
+        });
+        
         function generateQuarterFinals() {
+            // If round of 16 exists but not completed, simulate it
+            if (championsLeague.knockout.roundOf16.length > 0) {
+                const incompleteMatches = championsLeague.knockout.roundOf16.filter(m => !m.completed);
+                if (incompleteMatches.length > 0) {
+                    showNotification('Simulating incomplete Round of 16 matches first...', 'warning');
+                    incompleteMatches.forEach(match => {
+                        if (!match.leg1.completed) simulateMatch(match.leg1);
+                        if (!match.leg2.completed) simulateMatch(match.leg2);
+                    });
+                    
+                    setTimeout(() => {
+                        generateQuarterFinals();
+                    }, 500);
+                    return;
+                }
+            }
+            
+            // Get winners from Round of 16
             const winners = championsLeague.knockout.roundOf16
                 .filter(match => match.aggregateWinner)
                 .map(match => {
@@ -1226,8 +1389,32 @@
                 })
                 .filter(Boolean);
             
+            // If we don't have 8 winners, create dummy winners for testing
             if (winners.length !== 8) {
-                showNotification('Complete all Round of 16 matches first!', 'danger');
+                showNotification('Creating Quarter-finals with available teams...', 'warning');
+                
+                // Get all qualified teams from groups if no round of 16
+                if (championsLeague.knockout.roundOf16.length === 0) {
+                    const allQualified = [];
+                    championsLeague.groups.forEach(group => {
+                        const sorted = [...group.teams].sort((a, b) => {
+                            if (b.points !== a.points) return b.points - a.points;
+                            if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+                            return b.goalsFor - a.goalsFor;
+                        });
+                        allQualified.push(sorted[0], sorted[1]);
+                    });
+                    
+                    // Take first 8 teams
+                    winners.length = 0;
+                    allQualified.slice(0, 8).forEach(team => {
+                        winners.push({ team: team, fromMatch: null });
+                    });
+                }
+            }
+            
+            if (winners.length < 8) {
+                showNotification('Not enough qualified teams for Quarter-finals!', 'danger');
                 return;
             }
             
@@ -1281,7 +1468,45 @@
         
         generateSemiFinalsBtn.addEventListener('click', generateSemiFinals);
         
+        // NEW: Force Semi-finals button
+        forceSemifinalsBtn.addEventListener('click', function() {
+            if (championsLeague.knockout.quarterFinals.length === 0) {
+                // If no quarter-finals, create them
+                forceQuarterfinalsBtn.click();
+                setTimeout(() => {
+                    // Simulate quarter-finals
+                    championsLeague.knockout.quarterFinals.forEach(match => {
+                        if (!match.leg1.completed) simulateMatch(match.leg1);
+                        if (!match.leg2.completed) simulateMatch(match.leg2);
+                    });
+                    
+                    setTimeout(() => {
+                        generateSemiFinals();
+                    }, 500);
+                }, 1000);
+            } else {
+                generateSemiFinals();
+            }
+        });
+        
         function generateSemiFinals() {
+            // If quarter-finals exist but not completed, simulate them
+            if (championsLeague.knockout.quarterFinals.length > 0) {
+                const incompleteMatches = championsLeague.knockout.quarterFinals.filter(m => !m.completed);
+                if (incompleteMatches.length > 0) {
+                    showNotification('Simulating incomplete Quarter-final matches first...', 'warning');
+                    incompleteMatches.forEach(match => {
+                        if (!match.leg1.completed) simulateMatch(match.leg1);
+                        if (!match.leg2.completed) simulateMatch(match.leg2);
+                    });
+                    
+                    setTimeout(() => {
+                        generateSemiFinals();
+                    }, 500);
+                    return;
+                }
+            }
+            
             const winners = championsLeague.knockout.quarterFinals
                 .filter(match => match.aggregateWinner)
                 .map(match => {
@@ -1290,8 +1515,22 @@
                 })
                 .filter(Boolean);
             
+            // If we don't have 4 winners, create dummy winners for testing
             if (winners.length !== 4) {
-                showNotification('Complete all quarter-final matches first!', 'danger');
+                showNotification('Creating Semi-finals with available teams...', 'warning');
+                
+                // Get some teams if no quarter-finals
+                if (winners.length === 0) {
+                    const allTeams = [...teams].sort((a, b) => b.strength - a.strength).slice(0, 4);
+                    winners.length = 0;
+                    allTeams.forEach(team => {
+                        winners.push({ team: team, fromMatch: null });
+                    });
+                }
+            }
+            
+            if (winners.length < 4) {
+                showNotification('Not enough qualified teams for Semi-finals!', 'danger');
                 return;
             }
             
@@ -1344,7 +1583,45 @@
         
         generateFinalsBtn.addEventListener('click', generateFinals);
         
+        // NEW: Force Finals button
+        forceFinalsBtn.addEventListener('click', function() {
+            if (championsLeague.knockout.semiFinals.length === 0) {
+                // If no semi-finals, create them
+                forceSemifinalsBtn.click();
+                setTimeout(() => {
+                    // Simulate semi-finals
+                    championsLeague.knockout.semiFinals.forEach(match => {
+                        if (!match.leg1.completed) simulateMatch(match.leg1);
+                        if (!match.leg2.completed) simulateMatch(match.leg2);
+                    });
+                    
+                    setTimeout(() => {
+                        generateFinals();
+                    }, 500);
+                }, 1000);
+            } else {
+                generateFinals();
+            }
+        });
+        
         function generateFinals() {
+            // If semi-finals exist but not completed, simulate them
+            if (championsLeague.knockout.semiFinals.length > 0) {
+                const incompleteMatches = championsLeague.knockout.semiFinals.filter(m => !m.completed);
+                if (incompleteMatches.length > 0) {
+                    showNotification('Simulating incomplete Semi-final matches first...', 'warning');
+                    incompleteMatches.forEach(match => {
+                        if (!match.leg1.completed) simulateMatch(match.leg1);
+                        if (!match.leg2.completed) simulateMatch(match.leg2);
+                    });
+                    
+                    setTimeout(() => {
+                        generateFinals();
+                    }, 500);
+                    return;
+                }
+            }
+            
             const winners = championsLeague.knockout.semiFinals
                 .filter(match => match.aggregateWinner)
                 .map(match => {
@@ -1364,8 +1641,22 @@
                 })
                 .filter(Boolean);
             
+            // If we don't have 2 winners, create dummy winners for testing
             if (winners.length !== 2 || losers.length !== 2) {
-                showNotification('Complete all semi-final matches first!', 'danger');
+                showNotification('Creating Finals with available teams...', 'warning');
+                
+                // Get top 4 teams if no semi-finals
+                if (winners.length === 0) {
+                    const topTeams = [...teams].sort((a, b) => b.strength - a.strength).slice(0, 4);
+                    winners.length = 0;
+                    losers.length = 0;
+                    winners.push({ team: topTeams[0], fromMatch: null }, { team: topTeams[1], fromMatch: null });
+                    losers.push({ team: topTeams[2], fromMatch: null }, { team: topTeams[3], fromMatch: null });
+                }
+            }
+            
+            if (winners.length < 2 || losers.length < 2) {
+                showNotification('Not enough qualified teams for Finals!', 'danger');
                 return;
             }
             
@@ -1688,15 +1979,67 @@
             // Show/hide simulate button
             if (round16Matches.length > 0 || quarterMatches.length > 0 || semiMatches.length > 0) {
                 simulateKnockoutBtn.classList.remove('hidden');
+                simulateAllKnockoutBtn.classList.remove('hidden');
             } else {
                 simulateKnockoutBtn.classList.add('hidden');
+                simulateAllKnockoutBtn.classList.add('hidden');
             }
+            
+            // Show all knockout buttons in the knockout tab
+            generateQuarterFinalsContainer.classList.remove('hidden');
+            generateSemiFinalsContainer.classList.remove('hidden');
+            generateFinalsContainer.classList.remove('hidden');
         }
         
         simulateKnockoutBtn.addEventListener('click', function() {
             simulateKnockoutMatches();
             saveData();
             showNotification('Knockout matches simulated!', 'success');
+        });
+        
+        simulateAllKnockoutBtn.addEventListener('click', function() {
+            // Simulate all knockout rounds
+            if (championsLeague.knockout.roundOf16.length > 0) {
+                championsLeague.knockout.roundOf16.forEach(match => {
+                    if (!match.completed) {
+                        if (!match.leg1.completed) simulateMatch(match.leg1);
+                        if (!match.leg2.completed) simulateMatch(match.leg2);
+                    }
+                });
+            }
+            
+            setTimeout(() => {
+                if (championsLeague.knockout.quarterFinals.length > 0) {
+                    championsLeague.knockout.quarterFinals.forEach(match => {
+                        if (!match.completed) {
+                            if (!match.leg1.completed) simulateMatch(match.leg1);
+                            if (!match.leg2.completed) simulateMatch(match.leg2);
+                        }
+                    });
+                }
+                
+                setTimeout(() => {
+                    if (championsLeague.knockout.semiFinals.length > 0) {
+                        championsLeague.knockout.semiFinals.forEach(match => {
+                            if (!match.completed) {
+                                if (!match.leg1.completed) simulateMatch(match.leg1);
+                                if (!match.leg2.completed) simulateMatch(match.leg2);
+                            }
+                        });
+                    }
+                    
+                    setTimeout(() => {
+                        if (championsLeague.knockout.final && !championsLeague.knockout.final.completed) {
+                            simulateMatch(championsLeague.knockout.final);
+                        }
+                        if (championsLeague.knockout.thirdPlace && !championsLeague.knockout.thirdPlace.completed) {
+                            simulateMatch(championsLeague.knockout.thirdPlace);
+                        }
+                        
+                        showNotification('All knockout matches simulated!', 'success');
+                    }, 500);
+                }, 500);
+            }, 500);
         });
         
         function simulateKnockoutMatches() {
@@ -1764,7 +2107,10 @@
         function renderChampionsLeagueKnockout() {
             knockoutStage.innerHTML = '';
             
-            if (championsLeague.knockout.roundOf16.length === 0) {
+            if (championsLeague.knockout.roundOf16.length === 0 && 
+                championsLeague.knockout.quarterFinals.length === 0 && 
+                championsLeague.knockout.semiFinals.length === 0 && 
+                !championsLeague.knockout.final) {
                 knockoutStage.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-trophy"></i>
@@ -2086,17 +2432,17 @@
                 // Get incomplete legs from Round of 16
                 championsLeague.knockout.roundOf16.forEach(match => {
                     if (!match.leg1.completed) fixtures.push(match.leg1);
-                    else if (!match.leg2.completed) fixtures.push(match.leg2);
+                    if (!match.leg2.completed) fixtures.push(match.leg2);
                 });
             } else if (stage === 'quarterfinals') {
                 championsLeague.knockout.quarterFinals.forEach(match => {
                     if (!match.leg1.completed) fixtures.push(match.leg1);
-                    else if (!match.leg2.completed) fixtures.push(match.leg2);
+                    if (!match.leg2.completed) fixtures.push(match.leg2);
                 });
             } else if (stage === 'semifinals') {
                 championsLeague.knockout.semiFinals.forEach(match => {
                     if (!match.leg1.completed) fixtures.push(match.leg1);
-                    else if (!match.leg2.completed) fixtures.push(match.leg2);
+                    if (!match.leg2.completed) fixtures.push(match.leg2);
                 });
             } else if (stage === 'finals') {
                 if (championsLeague.knockout.final && !championsLeague.knockout.final.completed) {
