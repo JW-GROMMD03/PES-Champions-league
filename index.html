@@ -340,64 +340,6 @@
             font-style: italic;
         }
         
-        .two-leg-match {
-            border: 2px dashed rgba(255, 215, 0, 0.3);
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-        }
-        
-        .leg-info {
-            font-size: 0.8rem;
-            color: var(--gray);
-            text-align: center;
-            margin: 5px 0;
-        }
-        
-        .aggregate-score {
-            font-weight: bold;
-            color: var(--gold);
-            text-align: center;
-            margin: 10px 0;
-            padding: 5px;
-            background: rgba(255, 215, 0, 0.1);
-            border-radius: 5px;
-        }
-        
-        .winner-badge {
-            background: rgba(46, 213, 115, 0.2);
-            color: var(--success);
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            margin-top: 5px;
-            display: inline-block;
-        }
-        
-        .edit-btn {
-            background: rgba(255, 165, 2, 0.2);
-            color: var(--warning);
-            border: 1px solid rgba(255, 165, 2, 0.3);
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            margin-left: 10px;
-        }
-        
-        .edit-btn:hover {
-            background: rgba(255, 165, 2, 0.3);
-        }
-        
-        .history-match {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-left: 3px solid var(--gray);
-        }
-        
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -491,7 +433,7 @@
                 <div id="group-stage-status" style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                         <i class="fas fa-check-circle" id="group-stage-icon" style="color: var(--warning);"></i>
-                        <span>Group Stage: <span id="group-stage-progress">0/6 matches per team</span></span>
+                        <span>Group Stage: <span id="group-stage-progress">0/6 matchdays</span></span>
                     </div>
                     <div id="generate-round-of-16-container" class="generate-button-container hidden">
                         <button id="generate-round-of-16-btn" class="btn-gold">Generate Round of 16</button>
@@ -501,7 +443,7 @@
                 <div id="group-tables"></div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button id="generate-fixtures" class="btn-gold">Generate Fixtures (Single Leg)</button>
+                    <button id="generate-fixtures" class="btn-gold">Generate Fixtures</button>
                     <button id="simulate-groups" class="btn-secondary">Simulate All Group Matches</button>
                     <button id="quick-simulate-all" class="btn-secondary">Quick Simulate Everything</button>
                 </div>
@@ -584,7 +526,7 @@
                 </div>
                 
                 <div style="margin-top: 20px;">
-                    <h3>Match History (Click to Edit)</h3>
+                    <h3>Match History</h3>
                     <div id="match-history-list">
                         <div class="empty-state">
                             <i class="fas fa-history"></i>
@@ -600,16 +542,16 @@
     <div id="notification" class="notification"></div>
 
     <script>
-        // DATA STRUCTURE
+        // SIMPLE DATA STRUCTURE
         let teams = [];
         let championsLeague = {
             groups: [],
             knockout: {
-                roundOf16: [], // Array of two-leg matches {leg1, leg2, aggregateWinner, completed}
+                roundOf16: [],
                 quarterFinals: [],
                 semiFinals: [],
-                thirdPlace: null, // Single match
-                final: null // Single match
+                thirdPlace: null,
+                final: null
             },
             fixtures: [],
             currentStage: 'group'
@@ -658,19 +600,7 @@
             }
             
             if (localStorage.getItem('championsLeague')) {
-                const savedData = JSON.parse(localStorage.getItem('championsLeague'));
-                championsLeague = savedData;
-                
-                // Ensure knockout structure exists
-                if (!championsLeague.knockout) {
-                    championsLeague.knockout = {
-                        roundOf16: [],
-                        quarterFinals: [],
-                        semiFinals: [],
-                        thirdPlace: null,
-                        final: null
-                    };
-                }
+                championsLeague = JSON.parse(localStorage.getItem('championsLeague'));
             }
             
             renderTeams();
@@ -837,7 +767,7 @@
             });
         }
         
-        // Group Stage - SINGLE LEG ONLY
+        // Group Stage
         generateGroupsBtn.addEventListener('click', function() {
             if (teams.length < 16) {
                 showNotification('Need exactly 16 teams for Champions League!', 'danger');
@@ -945,7 +875,7 @@
                         <td>${team.losses}</td>
                         <td>${team.goalsFor}</td>
                         <td>${team.goalsAgainst}</td>
-                        <td>${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</td>
+                        <td>${team.goalDifference}</td>
                         <td><strong>${team.points}</strong></td>
                     `;
                     groupBody.appendChild(row);
@@ -953,7 +883,6 @@
             });
         }
         
-        // Generate SINGLE LEG group stage fixtures
         generateFixturesBtn.addEventListener('click', function() {
             if (championsLeague.groups.length === 0) {
                 showNotification('Generate groups first!', 'danger');
@@ -962,40 +891,58 @@
             
             generateChampionsLeagueFixtures();
             saveData();
-            showNotification('Single-leg fixtures generated!');
+            showNotification('Fixtures generated!');
             renderResultsPanel();
         });
         
         function generateChampionsLeagueFixtures() {
             championsLeague.fixtures = [];
-            let matchday = 1;
             
             championsLeague.groups.forEach(group => {
                 const groupTeams = group.teams;
                 
-                // Create single leg fixtures only
+                // Create all possible match combinations
                 for (let i = 0; i < groupTeams.length; i++) {
                     for (let j = i + 1; j < groupTeams.length; j++) {
-                        const fixture = {
+                        // Home match
+                        championsLeague.fixtures.push({
                             id: championsLeague.fixtures.length + 1,
                             homeTeam: groupTeams[i].id,
                             awayTeam: groupTeams[j].id,
-                            matchday: matchday,
+                            matchday: Math.floor(championsLeague.fixtures.length / 2) % 6 + 1,
                             homeScore: null,
                             awayScore: null,
                             completed: false,
                             stage: 'group',
-                            group: group.name,
-                            isSingleLeg: true
-                        };
+                            group: group.name
+                        });
                         
-                        championsLeague.fixtures.push(fixture);
-                        
-                        // Alternate matchdays for each fixture
-                        matchday = (matchday % 3) + 1;
+                        // Away match
+                        championsLeague.fixtures.push({
+                            id: championsLeague.fixtures.length + 1,
+                            homeTeam: groupTeams[j].id,
+                            awayTeam: groupTeams[i].id,
+                            matchday: Math.floor(championsLeague.fixtures.length / 2) % 6 + 1,
+                            homeScore: null,
+                            awayScore: null,
+                            completed: false,
+                            stage: 'group',
+                            group: group.name
+                        });
                     }
                 }
             });
+            
+            // Assign proper matchdays
+            let matchday = 1;
+            let matchesPerDay = 8; // 2 matches per group * 4 groups
+            
+            for (let i = 0; i < championsLeague.fixtures.length; i++) {
+                if (i > 0 && i % matchesPerDay === 0) {
+                    matchday++;
+                }
+                championsLeague.fixtures[i].matchday = matchday;
+            }
         }
         
         simulateGroupsBtn.addEventListener('click', function() {
@@ -1044,371 +991,6 @@
             });
         }
         
-        // KNOCKOUT STAGE - TWO LEG WITH AGGREGATE
-        generateRoundOf16Btn.addEventListener('click', generateRoundOf16);
-        
-        function generateRoundOf16() {
-            console.log("Generating Round of 16...");
-            
-            // Get qualified teams from each group
-            const groupWinners = [];
-            const groupRunnersUp = [];
-            
-            championsLeague.groups.forEach(group => {
-                const sorted = [...group.teams].sort((a, b) => {
-                    if (b.points !== a.points) return b.points - a.points;
-                    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
-                    return b.goalsFor - a.goalsFor;
-                });
-                
-                console.log(`${group.name} Winner: ${sorted[0].name}, Runner-up: ${sorted[1].name}`);
-                
-                groupWinners.push({
-                    team: sorted[0],
-                    group: group.name
-                });
-                
-                groupRunnersUp.push({
-                    team: sorted[1],
-                    group: group.name
-                });
-            });
-            
-            console.log("Group Winners:", groupWinners.map(w => `${w.team.name} (${w.group})`));
-            console.log("Group Runners-up:", groupRunnersUp.map(r => `${r.team.name} (${r.group})`));
-            
-            // Shuffle runners-up for random draw
-            const shuffledRunnersUp = [...groupRunnersUp].sort(() => Math.random() - 0.5);
-            
-            // Create TWO-LEG matches: winner vs runner-up from DIFFERENT group
-            championsLeague.knockout.roundOf16 = [];
-            const usedGroups = new Set();
-            
-            for (let i = 0; i < groupWinners.length; i++) {
-                const winner = groupWinners[i];
-                
-                // Find a runner-up from a different group
-                let runnerUpIndex = -1;
-                for (let j = 0; j < shuffledRunnersUp.length; j++) {
-                    if (shuffledRunnersUp[j].group !== winner.group && !usedGroups.has(shuffledRunnersUp[j].group)) {
-                        runnerUpIndex = j;
-                        usedGroups.add(shuffledRunnersUp[j].group);
-                        break;
-                    }
-                }
-                
-                // If no suitable runner-up found (shouldn't happen), take any
-                if (runnerUpIndex === -1) {
-                    for (let j = 0; j < shuffledRunnersUp.length; j++) {
-                        if (!usedGroups.has(shuffledRunnersUp[j].group)) {
-                            runnerUpIndex = j;
-                            usedGroups.add(shuffledRunnersUp[j].group);
-                            break;
-                        }
-                    }
-                }
-                
-                if (runnerUpIndex !== -1) {
-                    const runnerUp = shuffledRunnersUp[runnerUpIndex];
-                    
-                    // Create TWO-LEG match
-                    const twoLegMatch = {
-                        leg1: {
-                            id: championsLeague.fixtures.length + 1,
-                            homeTeam: winner.team.id,
-                            awayTeam: runnerUp.team.id,
-                            matchday: 7,
-                            homeScore: null,
-                            awayScore: null,
-                            completed: false,
-                            stage: 'Round of 16 - Leg 1',
-                            pairingInfo: `${winner.group} Winner vs ${runnerUp.group} Runner-up`
-                        },
-                        leg2: {
-                            id: championsLeague.fixtures.length + 2,
-                            homeTeam: runnerUp.team.id,
-                            awayTeam: winner.team.id,
-                            matchday: 8,
-                            homeScore: null,
-                            awayScore: null,
-                            completed: false,
-                            stage: 'Round of 16 - Leg 2',
-                            pairingInfo: `${runnerUp.group} Runner-up vs ${winner.group} Winner`
-                        },
-                        aggregateWinner: null,
-                        completed: false,
-                        penalties: null,
-                        aggregateScore: null
-                    };
-                    
-                    championsLeague.knockout.roundOf16.push(twoLegMatch);
-                    championsLeague.fixtures.push(twoLegMatch.leg1, twoLegMatch.leg2);
-                    console.log(`Match ${i+1}: ${winner.team.name} (${winner.group} Winner) vs ${runnerUp.team.name} (${runnerUp.group} Runner-up)`);
-                }
-            }
-            
-            console.log("Round of 16 two-leg matches created:", championsLeague.knockout.roundOf16.length);
-            
-            saveData();
-            renderChampionsLeagueKnockout();
-            renderResultsPanel();
-            updateKnockoutStageStatus();
-            showNotification('Round of 16 generated! Two-leg matches with aggregate scoring.', 'success');
-            switchTab('knockout');
-        }
-        
-        // Calculate aggregate winner for two-leg matches
-        function calculateAggregateWinner(twoLegMatch) {
-            if (!twoLegMatch.leg1.completed || !twoLegMatch.leg2.completed) {
-                return null;
-            }
-            
-            const team1Id = twoLegMatch.leg1.homeTeam;
-            const team2Id = twoLegMatch.leg1.awayTeam;
-            
-            // Determine which leg each team played at home
-            let team1HomeGoals = 0;
-            let team1AwayGoals = 0;
-            let team2HomeGoals = 0;
-            let team2AwayGoals = 0;
-            
-            if (twoLegMatch.leg1.homeTeam === team1Id) {
-                team1HomeGoals = twoLegMatch.leg1.homeScore;
-                team2AwayGoals = twoLegMatch.leg1.awayScore;
-            } else {
-                team2HomeGoals = twoLegMatch.leg1.homeScore;
-                team1AwayGoals = twoLegMatch.leg1.awayScore;
-            }
-            
-            if (twoLegMatch.leg2.homeTeam === team1Id) {
-                team1HomeGoals = twoLegMatch.leg2.homeScore;
-                team2AwayGoals = twoLegMatch.leg2.awayScore;
-            } else {
-                team2HomeGoals = twoLegMatch.leg2.homeScore;
-                team1AwayGoals = twoLegMatch.leg2.awayScore;
-            }
-            
-            const team1Aggregate = team1HomeGoals + team1AwayGoals;
-            const team2Aggregate = team2HomeGoals + team2AwayGoals;
-            
-            twoLegMatch.aggregateScore = `${team1Aggregate}-${team2Aggregate} (${team1HomeGoals}-${team2AwayGoals} A, ${team2HomeGoals}-${team1AwayGoals} H)`;
-            
-            let winnerId = null;
-            
-            if (team1Aggregate > team2Aggregate) {
-                winnerId = team1Id;
-            } else if (team2Aggregate > team1Aggregate) {
-                winnerId = team2Id;
-            } else {
-                // Away goals rule
-                if (team1AwayGoals > team2AwayGoals) {
-                    winnerId = team1Id;
-                } else if (team2AwayGoals > team1AwayGoals) {
-                    winnerId = team2Id;
-                } else {
-                    // Penalties (random for simulation)
-                    twoLegMatch.penalties = true;
-                    winnerId = Math.random() > 0.5 ? team1Id : team2Id;
-                }
-            }
-            
-            return winnerId;
-        }
-        
-        generateQuarterFinalsBtn.addEventListener('click', generateQuarterFinals);
-        
-        function generateQuarterFinals() {
-            const winners = championsLeague.knockout.roundOf16
-                .filter(match => match.aggregateWinner)
-                .map(match => {
-                    const team = teams.find(t => t.id === match.aggregateWinner);
-                    return team ? { team: team, fromMatch: match } : null;
-                })
-                .filter(Boolean);
-            
-            if (winners.length !== 8) {
-                showNotification('Complete all Round of 16 matches first!', 'danger');
-                return;
-            }
-            
-            // Shuffle winners for random draw
-            const shuffledWinners = [...winners].sort(() => Math.random() - 0.5);
-            
-            championsLeague.knockout.quarterFinals = [];
-            
-            for (let i = 0; i < 4; i++) {
-                const winner1 = shuffledWinners[i * 2];
-                const winner2 = shuffledWinners[i * 2 + 1];
-                
-                // Create TWO-LEG quarter-final
-                const twoLegMatch = {
-                    leg1: {
-                        id: championsLeague.fixtures.length + 1,
-                        homeTeam: winner1.team.id,
-                        awayTeam: winner2.team.id,
-                        matchday: 9,
-                        homeScore: null,
-                        awayScore: null,
-                        completed: false,
-                        stage: 'Quarter-finals - Leg 1'
-                    },
-                    leg2: {
-                        id: championsLeague.fixtures.length + 2,
-                        homeTeam: winner2.team.id,
-                        awayTeam: winner1.team.id,
-                        matchday: 10,
-                        homeScore: null,
-                        awayScore: null,
-                        completed: false,
-                        stage: 'Quarter-finals - Leg 2'
-                    },
-                    aggregateWinner: null,
-                    completed: false,
-                    penalties: null,
-                    aggregateScore: null
-                };
-                
-                championsLeague.knockout.quarterFinals.push(twoLegMatch);
-                championsLeague.fixtures.push(twoLegMatch.leg1, twoLegMatch.leg2);
-            }
-            
-            saveData();
-            renderChampionsLeagueKnockout();
-            renderResultsPanel();
-            updateKnockoutStageStatus();
-            showNotification('Quarter-finals generated! Two-leg matches.', 'success');
-        }
-        
-        generateSemiFinalsBtn.addEventListener('click', generateSemiFinals);
-        
-        function generateSemiFinals() {
-            const winners = championsLeague.knockout.quarterFinals
-                .filter(match => match.aggregateWinner)
-                .map(match => {
-                    const team = teams.find(t => t.id === match.aggregateWinner);
-                    return team ? { team: team, fromMatch: match } : null;
-                })
-                .filter(Boolean);
-            
-            if (winners.length !== 4) {
-                showNotification('Complete all quarter-final matches first!', 'danger');
-                return;
-            }
-            
-            const shuffled = [...winners].sort(() => Math.random() - 0.5);
-            
-            championsLeague.knockout.semiFinals = [];
-            
-            for (let i = 0; i < 2; i++) {
-                const winner1 = shuffled[i * 2];
-                const winner2 = shuffled[i * 2 + 1];
-                
-                // Create TWO-LEG semi-final
-                const twoLegMatch = {
-                    leg1: {
-                        id: championsLeague.fixtures.length + 1,
-                        homeTeam: winner1.team.id,
-                        awayTeam: winner2.team.id,
-                        matchday: 11,
-                        homeScore: null,
-                        awayScore: null,
-                        completed: false,
-                        stage: 'Semi-finals - Leg 1'
-                    },
-                    leg2: {
-                        id: championsLeague.fixtures.length + 2,
-                        homeTeam: winner2.team.id,
-                        awayTeam: winner1.team.id,
-                        matchday: 12,
-                        homeScore: null,
-                        awayScore: null,
-                        completed: false,
-                        stage: 'Semi-finals - Leg 2'
-                    },
-                    aggregateWinner: null,
-                    completed: false,
-                    penalties: null,
-                    aggregateScore: null
-                };
-                
-                championsLeague.knockout.semiFinals.push(twoLegMatch);
-                championsLeague.fixtures.push(twoLegMatch.leg1, twoLegMatch.leg2);
-            }
-            
-            saveData();
-            renderChampionsLeagueKnockout();
-            renderResultsPanel();
-            updateKnockoutStageStatus();
-            showNotification('Semi-finals generated! Two-leg matches.', 'success');
-        }
-        
-        generateFinalsBtn.addEventListener('click', generateFinals);
-        
-        function generateFinals() {
-            const winners = championsLeague.knockout.semiFinals
-                .filter(match => match.aggregateWinner)
-                .map(match => {
-                    const team = teams.find(t => t.id === match.aggregateWinner);
-                    return team ? { team: team, fromMatch: match } : null;
-                })
-                .filter(Boolean);
-            
-            const losers = championsLeague.knockout.semiFinals
-                .filter(match => match.aggregateWinner)
-                .map(match => {
-                    const winnerId = match.aggregateWinner;
-                    const leg1Team1 = teams.find(t => t.id === match.leg1.homeTeam);
-                    const leg1Team2 = teams.find(t => t.id === match.leg1.awayTeam);
-                    // Return the team that is NOT the winner
-                    return leg1Team1.id === winnerId ? { team: leg1Team2, fromMatch: match } : { team: leg1Team1, fromMatch: match };
-                })
-                .filter(Boolean);
-            
-            if (winners.length !== 2 || losers.length !== 2) {
-                showNotification('Complete all semi-final matches first!', 'danger');
-                return;
-            }
-            
-            // FINAL - SINGLE LEG
-            championsLeague.knockout.final = {
-                id: championsLeague.fixtures.length + 1,
-                homeTeam: winners[0].team.id,
-                awayTeam: winners[1].team.id,
-                matchday: 13,
-                homeScore: null,
-                awayScore: null,
-                completed: false,
-                stage: 'Final',
-                winner: null,
-                loser: null,
-                isSingleLeg: true
-            };
-            championsLeague.fixtures.push(championsLeague.knockout.final);
-            
-            // THIRD PLACE - SINGLE LEG
-            championsLeague.knockout.thirdPlace = {
-                id: championsLeague.fixtures.length + 1,
-                homeTeam: losers[0].team.id,
-                awayTeam: losers[1].team.id,
-                matchday: 13,
-                homeScore: null,
-                awayScore: null,
-                completed: false,
-                stage: 'Third-place Playoff',
-                winner: null,
-                loser: null,
-                isSingleLeg: true
-            };
-            championsLeague.fixtures.push(championsLeague.knockout.thirdPlace);
-            
-            saveData();
-            renderChampionsLeagueKnockout();
-            renderResultsPanel();
-            updateKnockoutStageStatus();
-            showNotification('Finals generated! Single-leg Final and Third-place playoff.', 'success');
-        }
-        
-        // Save result function - UPDATED FOR TWO-LEG KNOCKOUT
         function saveResult(fixtureId, homeScore, awayScore) {
             const fixture = championsLeague.fixtures.find(f => f.id === fixtureId);
             if (!fixture) return;
@@ -1449,42 +1031,9 @@
                         }
                     }
                 }
-            } 
-            // Handle knockout matches
-            else if (fixture.stage.includes('Round of 16') || fixture.stage.includes('Quarter-finals') || 
-                     fixture.stage.includes('Semi-finals')) {
-                
-                // Find which two-leg match this fixture belongs to
-                let twoLegMatch = null;
-                let roundArray = null;
-                
-                if (fixture.stage.includes('Round of 16')) {
-                    roundArray = championsLeague.knockout.roundOf16;
-                } else if (fixture.stage.includes('Quarter-finals')) {
-                    roundArray = championsLeague.knockout.quarterFinals;
-                } else if (fixture.stage.includes('Semi-finals')) {
-                    roundArray = championsLeague.knockout.semiFinals;
-                }
-                
-                if (roundArray) {
-                    twoLegMatch = roundArray.find(match => 
-                        match.leg1.id === fixtureId || match.leg2.id === fixtureId
-                    );
-                    
-                    if (twoLegMatch) {
-                        // Check if both legs are now completed
-                        if (twoLegMatch.leg1.completed && twoLegMatch.leg2.completed) {
-                            twoLegMatch.aggregateWinner = calculateAggregateWinner(twoLegMatch);
-                            twoLegMatch.completed = true;
-                            
-                            // Check if round is complete
-                            checkRoundCompletion(fixture.stage.split(' - ')[0]);
-                        }
-                    }
-                }
-            }
-            // Handle single-leg finals
-            else if (fixture.stage === 'Final' || fixture.stage === 'Third-place Playoff') {
+            } else if (fixture.stage.includes('Round') || fixture.stage.includes('Quarter') || 
+                       fixture.stage.includes('Semi')) {
+                // Knockout match
                 if (homeScore > awayScore) {
                     fixture.winner = fixture.homeTeam;
                     fixture.loser = fixture.awayTeam;
@@ -1492,128 +1041,292 @@
                     fixture.winner = fixture.awayTeam;
                     fixture.loser = fixture.homeTeam;
                 } else {
-                    // Penalties for draws in finals
+                    // Penalties for knockout draws
                     fixture.winner = Math.random() > 0.5 ? fixture.homeTeam : fixture.awayTeam;
                     fixture.loser = fixture.winner === fixture.homeTeam ? fixture.awayTeam : fixture.homeTeam;
                     fixture.penalties = true;
+                }
+                
+                // Check if round is complete
+                checkRoundCompletion(fixture.stage);
+            } else if (fixture.stage === 'Final' || fixture.stage === 'Third-place') {
+                if (homeScore > awayScore) {
+                    fixture.winner = fixture.homeTeam;
+                    fixture.loser = fixture.awayTeam;
+                } else {
+                    fixture.winner = fixture.awayTeam;
+                    fixture.loser = fixture.homeTeam;
                 }
             }
             
             saveData();
             renderChampionsLeagueGroups();
             renderResultsPanel();
-            renderChampionsLeagueKnockout();
             updateGroupStageStatus();
             updateKnockoutStageStatus();
-            
-            showNotification('Result saved successfully!', 'success');
         }
         
-        // EDIT RESULT FUNCTION
-        function editResult(fixtureId) {
-            const fixture = championsLeague.fixtures.find(f => f.id === fixtureId);
-            if (!fixture) return;
-            
-            // Store old scores
-            const oldHomeScore = fixture.homeScore;
-            const oldAwayScore = fixture.awayScore;
-            
-            // Ask for new scores
-            const newHomeScore = prompt(`Edit home score for ${teams.find(t => t.id === fixture.homeTeam).name}:`, oldHomeScore);
-            const newAwayScore = prompt(`Edit away score for ${teams.find(t => t.id === fixture.awayTeam).name}:`, oldAwayScore);
-            
-            if (newHomeScore === null || newAwayScore === null) {
-                return; // User cancelled
-            }
-            
-            const homeScore = parseInt(newHomeScore);
-            const awayScore = parseInt(newAwayScore);
-            
-            if (isNaN(homeScore) || isNaN(awayScore)) {
-                showNotification('Please enter valid numbers!', 'danger');
+        function updateGroupStageStatus() {
+            if (championsLeague.groups.length === 0) {
+                groupStageProgress.textContent = '0/6 matchdays';
+                generateRoundOf16Container.classList.add('hidden');
+                groupStageIcon.style.color = 'var(--warning)';
                 return;
             }
             
-            // Reset the fixture first
-            fixture.homeScore = null;
-            fixture.awayScore = null;
-            fixture.completed = false;
+            const groupFixtures = championsLeague.fixtures.filter(f => f.stage === 'group');
+            const completed = groupFixtures.filter(f => f.completed).length;
+            const total = groupFixtures.length;
             
-            // For knockout two-leg matches, we need to handle differently
-            let twoLegMatch = null;
-            if (fixture.stage.includes('Round of 16') || fixture.stage.includes('Quarter-finals') || 
-                fixture.stage.includes('Semi-finals')) {
+            groupStageProgress.textContent = `${completed}/${total} matches`;
+            
+            if (completed === total && total > 0) {
+                groupStageIcon.style.color = 'var(--success)';
+                generateRoundOf16Container.classList.remove('hidden');
+            } else {
+                groupStageIcon.style.color = 'var(--warning)';
+                generateRoundOf16Container.classList.add('hidden');
+            }
+        }
+        
+        // KNOCKOUT STAGE - WITH PROPER GROUP WINNER VS RUNNER-UP PAIRING
+        generateRoundOf16Btn.addEventListener('click', generateRoundOf16);
+        
+        function generateRoundOf16() {
+            console.log("Generating Round of 16...");
+            
+            // Get qualified teams from each group
+            const groupWinners = [];
+            const groupRunnersUp = [];
+            
+            championsLeague.groups.forEach(group => {
+                const sorted = [...group.teams].sort((a, b) => {
+                    if (b.points !== a.points) return b.points - a.points;
+                    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+                    return b.goalsFor - a.goalsFor;
+                });
                 
-                let roundArray = null;
-                if (fixture.stage.includes('Round of 16')) {
-                    roundArray = championsLeague.knockout.roundOf16;
-                } else if (fixture.stage.includes('Quarter-finals')) {
-                    roundArray = championsLeague.knockout.quarterFinals;
-                } else if (fixture.stage.includes('Semi-finals')) {
-                    roundArray = championsLeague.knockout.semiFinals;
-                }
+                console.log(`${group.name} Winner: ${sorted[0].name}, Runner-up: ${sorted[1].name}`);
                 
-                if (roundArray) {
-                    twoLegMatch = roundArray.find(match => 
-                        match.leg1.id === fixtureId || match.leg2.id === fixtureId
-                    );
-                    
-                    if (twoLegMatch) {
-                        twoLegMatch.completed = false;
-                        twoLegMatch.aggregateWinner = null;
-                        twoLegMatch.aggregateScore = null;
-                        twoLegMatch.penalties = null;
+                groupWinners.push({
+                    team: sorted[0],
+                    group: group.name
+                });
+                
+                groupRunnersUp.push({
+                    team: sorted[1],
+                    group: group.name
+                });
+            });
+            
+            console.log("Group Winners:", groupWinners.map(w => `${w.team.name} (${w.group})`));
+            console.log("Group Runners-up:", groupRunnersUp.map(r => `${r.team.name} (${r.group})`));
+            
+            // Shuffle runners-up for random draw
+            const shuffledRunnersUp = [...groupRunnersUp].sort(() => Math.random() - 0.5);
+            
+            // Create matches: winner vs runner-up from DIFFERENT group
+            championsLeague.knockout.roundOf16 = [];
+            const usedGroups = new Set();
+            
+            for (let i = 0; i < groupWinners.length; i++) {
+                const winner = groupWinners[i];
+                
+                // Find a runner-up from a different group
+                let runnerUpIndex = -1;
+                for (let j = 0; j < shuffledRunnersUp.length; j++) {
+                    if (shuffledRunnersUp[j].group !== winner.group && !usedGroups.has(shuffledRunnersUp[j].group)) {
+                        runnerUpIndex = j;
+                        usedGroups.add(shuffledRunnersUp[j].group);
+                        break;
                     }
                 }
-            }
-            
-            // For group matches, revert old stats
-            if (fixture.stage === 'group') {
-                const group = championsLeague.groups.find(g => g.name === fixture.group);
-                if (group) {
-                    const homeTeam = group.teams.find(t => t.id === fixture.homeTeam);
-                    const awayTeam = group.teams.find(t => t.id === fixture.awayTeam);
-                    
-                    if (homeTeam && awayTeam) {
-                        // Revert old stats
-                        homeTeam.played--;
-                        awayTeam.played--;
-                        homeTeam.goalsFor -= oldHomeScore;
-                        homeTeam.goalsAgainst -= oldAwayScore;
-                        awayTeam.goalsFor -= oldAwayScore;
-                        awayTeam.goalsAgainst -= oldHomeScore;
-                        homeTeam.goalDifference = homeTeam.goalsFor - homeTeam.goalsAgainst;
-                        awayTeam.goalDifference = awayTeam.goalsFor - awayTeam.goalsAgainst;
-                        
-                        if (oldHomeScore > oldAwayScore) {
-                            homeTeam.wins--;
-                            awayTeam.losses--;
-                            homeTeam.points -= 3;
-                        } else if (oldHomeScore < oldAwayScore) {
-                            awayTeam.wins--;
-                            homeTeam.losses--;
-                            awayTeam.points -= 3;
-                        } else {
-                            homeTeam.draws--;
-                            awayTeam.draws--;
-                            homeTeam.points -= 1;
-                            awayTeam.points -= 1;
+                
+                // If no suitable runner-up found (shouldn't happen), take any
+                if (runnerUpIndex === -1) {
+                    for (let j = 0; j < shuffledRunnersUp.length; j++) {
+                        if (!usedGroups.has(shuffledRunnersUp[j].group)) {
+                            runnerUpIndex = j;
+                            usedGroups.add(shuffledRunnersUp[j].group);
+                            break;
                         }
                     }
                 }
+                
+                if (runnerUpIndex !== -1) {
+                    const runnerUp = shuffledRunnersUp[runnerUpIndex];
+                    
+                    const match = {
+                        id: championsLeague.fixtures.length + 1,
+                        homeTeam: winner.team.id,
+                        awayTeam: runnerUp.team.id,
+                        matchday: 7,
+                        homeScore: null,
+                        awayScore: null,
+                        completed: false,
+                        stage: 'Round of 16',
+                        winner: null,
+                        loser: null,
+                        pairingInfo: `${winner.group} Winner vs ${runnerUp.group} Runner-up`
+                    };
+                    
+                    championsLeague.knockout.roundOf16.push(match);
+                    championsLeague.fixtures.push(match);
+                    console.log(`Match ${i+1}: ${winner.team.name} (${winner.group} Winner) vs ${runnerUp.team.name} (${runnerUp.group} Runner-up)`);
+                }
             }
             
-            // For single-leg finals, reset winner
-            if (fixture.stage === 'Final' || fixture.stage === 'Third-place Playoff') {
-                fixture.winner = null;
-                fixture.loser = null;
-                fixture.penalties = null;
+            console.log("Round of 16 matches created:", championsLeague.knockout.roundOf16.length);
+            
+            saveData();
+            renderChampionsLeagueKnockout();
+            renderResultsPanel();
+            updateKnockoutStageStatus();
+            showNotification('Round of 16 generated! Winners vs Runners-up from different groups.', 'success');
+            switchTab('knockout');
+        }
+        
+        generateQuarterFinalsBtn.addEventListener('click', generateQuarterFinals);
+        
+        function generateQuarterFinals() {
+            const winners = championsLeague.knockout.roundOf16
+                .filter(m => m.winner)
+                .map(m => {
+                    const team = teams.find(t => t.id === m.winner);
+                    return team ? { team: team, fromMatch: m.id } : null;
+                })
+                .filter(Boolean);
+            
+            if (winners.length !== 8) {
+                showNotification('Complete all Round of 16 matches first!', 'danger');
+                return;
             }
             
-            // Now save the new result
-            saveResult(fixtureId, homeScore, awayScore);
+            // Shuffle winners for random draw
+            const shuffledWinners = [...winners].sort(() => Math.random() - 0.5);
             
-            showNotification('Result updated successfully!', 'success');
+            championsLeague.knockout.quarterFinals = [];
+            
+            for (let i = 0; i < 4; i++) {
+                const match = {
+                    id: championsLeague.fixtures.length + 1,
+                    homeTeam: shuffledWinners[i * 2].team.id,
+                    awayTeam: shuffledWinners[i * 2 + 1].team.id,
+                    matchday: 8,
+                    homeScore: null,
+                    awayScore: null,
+                    completed: false,
+                    stage: 'Quarter-finals',
+                    winner: null,
+                    loser: null
+                };
+                
+                championsLeague.knockout.quarterFinals.push(match);
+                championsLeague.fixtures.push(match);
+            }
+            
+            saveData();
+            renderChampionsLeagueKnockout();
+            renderResultsPanel();
+            updateKnockoutStageStatus();
+            showNotification('Quarter-finals generated!', 'success');
+        }
+        
+        generateSemiFinalsBtn.addEventListener('click', generateSemiFinals);
+        
+        function generateSemiFinals() {
+            const winners = championsLeague.knockout.quarterFinals
+                .filter(m => m.winner)
+                .map(m => teams.find(t => t.id === m.winner))
+                .filter(Boolean);
+            
+            if (winners.length !== 4) {
+                showNotification('Complete all quarter-final matches first!', 'danger');
+                return;
+            }
+            
+            const shuffled = [...winners].sort(() => Math.random() - 0.5);
+            
+            championsLeague.knockout.semiFinals = [];
+            
+            for (let i = 0; i < 2; i++) {
+                const match = {
+                    id: championsLeague.fixtures.length + 1,
+                    homeTeam: shuffled[i * 2].id,
+                    awayTeam: shuffled[i * 2 + 1].id,
+                    matchday: 9,
+                    homeScore: null,
+                    awayScore: null,
+                    completed: false,
+                    stage: 'Semi-finals',
+                    winner: null,
+                    loser: null
+                };
+                
+                championsLeague.knockout.semiFinals.push(match);
+                championsLeague.fixtures.push(match);
+            }
+            
+            saveData();
+            renderChampionsLeagueKnockout();
+            renderResultsPanel();
+            updateKnockoutStageStatus();
+            showNotification('Semi-finals generated!', 'success');
+        }
+        
+        generateFinalsBtn.addEventListener('click', generateFinals);
+        
+        function generateFinals() {
+            const winners = championsLeague.knockout.semiFinals
+                .filter(m => m.winner)
+                .map(m => teams.find(t => t.id === m.winner))
+                .filter(Boolean);
+            
+            const losers = championsLeague.knockout.semiFinals
+                .filter(m => m.loser)
+                .map(m => teams.find(t => t.id === m.loser))
+                .filter(Boolean);
+            
+            if (winners.length !== 2 || losers.length !== 2) {
+                showNotification('Complete all semi-final matches first!', 'danger');
+                return;
+            }
+            
+            // Final
+            championsLeague.knockout.final = {
+                id: championsLeague.fixtures.length + 1,
+                homeTeam: winners[0].id,
+                awayTeam: winners[1].id,
+                matchday: 10,
+                homeScore: null,
+                awayScore: null,
+                completed: false,
+                stage: 'Final',
+                winner: null,
+                loser: null
+            };
+            championsLeague.fixtures.push(championsLeague.knockout.final);
+            
+            // Third place
+            championsLeague.knockout.thirdPlace = {
+                id: championsLeague.fixtures.length + 1,
+                homeTeam: losers[0].id,
+                awayTeam: losers[1].id,
+                matchday: 10,
+                homeScore: null,
+                awayScore: null,
+                completed: false,
+                stage: 'Third-place',
+                winner: null,
+                loser: null
+            };
+            championsLeague.fixtures.push(championsLeague.knockout.thirdPlace);
+            
+            saveData();
+            renderChampionsLeagueKnockout();
+            renderResultsPanel();
+            updateKnockoutStageStatus();
+            showNotification('Finals generated!', 'success');
         }
         
         function checkRoundCompletion(stage) {
@@ -1635,34 +1348,6 @@
                 if (nextRoundBtn) {
                     nextRoundBtn.classList.remove('hidden');
                 }
-            }
-        }
-        
-        function updateGroupStageStatus() {
-            if (championsLeague.groups.length === 0) {
-                groupStageProgress.textContent = '0/3 matches per team';
-                generateRoundOf16Container.classList.add('hidden');
-                groupStageIcon.style.color = 'var(--warning)';
-                return;
-            }
-            
-            // Count matches per team (each team plays 3 matches in single-leg format)
-            const totalGroupMatches = championsLeague.groups.reduce((total, group) => {
-                return total + (group.teams.length * (group.teams.length - 1)) / 2;
-            }, 0);
-            
-            const completedGroupMatches = championsLeague.fixtures.filter(f => 
-                f.stage === 'group' && f.completed
-            ).length;
-            
-            groupStageProgress.textContent = `${completedGroupMatches}/${totalGroupMatches} matches`;
-            
-            if (completedGroupMatches === totalGroupMatches && totalGroupMatches > 0) {
-                groupStageIcon.style.color = 'var(--success)';
-                generateRoundOf16Container.classList.remove('hidden');
-            } else {
-                groupStageIcon.style.color = 'var(--warning)';
-                generateRoundOf16Container.classList.add('hidden');
             }
         }
         
@@ -1703,24 +1388,15 @@
             // Simulate incomplete matches in current round
             if (championsLeague.knockout.roundOf16.some(m => !m.completed)) {
                 championsLeague.knockout.roundOf16.forEach(match => {
-                    if (!match.completed) {
-                        if (!match.leg1.completed) simulateMatch(match.leg1);
-                        if (!match.leg2.completed) simulateMatch(match.leg2);
-                    }
+                    if (!match.completed) simulateMatch(match);
                 });
             } else if (championsLeague.knockout.quarterFinals.some(m => !m.completed)) {
                 championsLeague.knockout.quarterFinals.forEach(match => {
-                    if (!match.completed) {
-                        if (!match.leg1.completed) simulateMatch(match.leg1);
-                        if (!match.leg2.completed) simulateMatch(match.leg2);
-                    }
+                    if (!match.completed) simulateMatch(match);
                 });
             } else if (championsLeague.knockout.semiFinals.some(m => !m.completed)) {
                 championsLeague.knockout.semiFinals.forEach(match => {
-                    if (!match.completed) {
-                        if (!match.leg1.completed) simulateMatch(match.leg1);
-                        if (!match.leg2.completed) simulateMatch(match.leg2);
-                    }
+                    if (!match.completed) simulateMatch(match);
                 });
             } else if (championsLeague.knockout.final && !championsLeague.knockout.final.completed) {
                 simulateMatch(championsLeague.knockout.final);
@@ -1782,61 +1458,39 @@
             if (championsLeague.knockout.roundOf16.length > 0) {
                 const roundDiv = document.createElement('div');
                 roundDiv.className = 'knockout-column';
-                roundDiv.innerHTML = '<h3 class="round-title">Round of 16 (Two Legs)</h3>';
+                roundDiv.innerHTML = '<h3 class="round-title">Round of 16</h3>';
                 
                 championsLeague.knockout.roundOf16.forEach((match, i) => {
-                    const team1 = teams.find(t => t.id === match.leg1.homeTeam);
-                    const team2 = teams.find(t => t.id === match.leg1.awayTeam);
+                    const homeTeam = teams.find(t => t.id === match.homeTeam);
+                    const awayTeam = teams.find(t => t.id === match.awayTeam);
                     
-                    if (!team1 || !team2) return;
+                    if (!homeTeam || !awayTeam) return;
                     
                     const matchDiv = document.createElement('div');
                     matchDiv.className = 'knockout-match-card';
-                    matchDiv.innerHTML = `<h4 style="text-align: center; margin-bottom: 10px;">Match ${i + 1}</h4>`;
-                    
-                    const twoLegDiv = document.createElement('div');
-                    twoLegDiv.className = 'two-leg-match';
                     
                     if (match.completed) {
-                        const winner = match.aggregateWinner ? teams.find(t => t.id === match.aggregateWinner) : null;
-                        twoLegDiv.innerHTML = `
-                            <div class="leg-info">First Leg</div>
+                        const winner = match.winner ? teams.find(t => t.id === match.winner) : null;
+                        matchDiv.innerHTML = `
                             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team1.name}</span>
-                                <span>${match.leg1.homeScore} - ${match.leg1.awayScore}</span>
-                                <span>${team2.name}</span>
+                                <span>${homeTeam.name}</span>
+                                <span>${match.homeScore} - ${match.awayScore}</span>
+                                <span>${awayTeam.name}</span>
                             </div>
-                            <div class="leg-info">Second Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team2.name}</span>
-                                <span>${match.leg2.homeScore} - ${match.leg2.awayScore}</span>
-                                <span>${team1.name}</span>
-                            </div>
-                            <div class="aggregate-score">
-                                Aggregate: ${match.aggregateScore}
-                                ${match.penalties ? '<br><small>(Decided by penalties)</small>' : ''}
-                            </div>
-                            ${winner ? `<div class="winner-badge">Winner: ${winner.name}</div>` : ''}
+                            <div class="match-pairing">${match.pairingInfo || 'Group Winner vs Runner-up'}</div>
+                            ${winner ? `<div style="text-align: center; color: var(--gold); font-weight: bold; margin-top: 5px;">Winner: ${winner.name}</div>` : ''}
                         `;
                     } else {
-                        twoLegDiv.innerHTML = `
-                            <div class="leg-info">First Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team1.name}</span>
+                        matchDiv.innerHTML = `
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>${homeTeam.name}</span>
                                 <span>vs</span>
-                                <span>${team2.name}</span>
+                                <span>${awayTeam.name}</span>
                             </div>
-                            <div class="leg-info">Second Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team2.name}</span>
-                                <span>vs</span>
-                                <span>${team1.name}</span>
-                            </div>
-                            <div class="match-pairing">${match.leg1.pairingInfo || 'Group Winner vs Runner-up'}</div>
+                            <div class="match-pairing">${match.pairingInfo || 'Group Winner vs Runner-up'}</div>
                         `;
                     }
                     
-                    matchDiv.appendChild(twoLegDiv);
                     roundDiv.appendChild(matchDiv);
                 });
                 
@@ -1847,60 +1501,37 @@
             if (championsLeague.knockout.quarterFinals.length > 0) {
                 const roundDiv = document.createElement('div');
                 roundDiv.className = 'knockout-column';
-                roundDiv.innerHTML = '<h3 class="round-title">Quarter-finals (Two Legs)</h3>';
+                roundDiv.innerHTML = '<h3 class="round-title">Quarter-finals</h3>';
                 
-                championsLeague.knockout.quarterFinals.forEach((match, i) => {
-                    const team1 = teams.find(t => t.id === match.leg1.homeTeam);
-                    const team2 = teams.find(t => t.id === match.leg1.awayTeam);
+                championsLeague.knockout.quarterFinals.forEach(match => {
+                    const homeTeam = teams.find(t => t.id === match.homeTeam);
+                    const awayTeam = teams.find(t => t.id === match.awayTeam);
                     
-                    if (!team1 || !team2) return;
+                    if (!homeTeam || !awayTeam) return;
                     
                     const matchDiv = document.createElement('div');
                     matchDiv.className = 'knockout-match-card';
-                    matchDiv.innerHTML = `<h4 style="text-align: center; margin-bottom: 10px;">Match ${i + 1}</h4>`;
-                    
-                    const twoLegDiv = document.createElement('div');
-                    twoLegDiv.className = 'two-leg-match';
                     
                     if (match.completed) {
-                        const winner = match.aggregateWinner ? teams.find(t => t.id === match.aggregateWinner) : null;
-                        twoLegDiv.innerHTML = `
-                            <div class="leg-info">First Leg</div>
+                        const winner = match.winner ? teams.find(t => t.id === match.winner) : null;
+                        matchDiv.innerHTML = `
                             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team1.name}</span>
-                                <span>${match.leg1.homeScore} - ${match.leg1.awayScore}</span>
-                                <span>${team2.name}</span>
+                                <span>${homeTeam.name}</span>
+                                <span>${match.homeScore} - ${match.awayScore}</span>
+                                <span>${awayTeam.name}</span>
                             </div>
-                            <div class="leg-info">Second Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team2.name}</span>
-                                <span>${match.leg2.homeScore} - ${match.leg2.awayScore}</span>
-                                <span>${team1.name}</span>
-                            </div>
-                            <div class="aggregate-score">
-                                Aggregate: ${match.aggregateScore}
-                                ${match.penalties ? '<br><small>(Decided by penalties)</small>' : ''}
-                            </div>
-                            ${winner ? `<div class="winner-badge">Winner: ${winner.name}</div>` : ''}
+                            ${winner ? `<div style="text-align: center; color: var(--gold); font-weight: bold;">Winner: ${winner.name}</div>` : ''}
                         `;
                     } else {
-                        twoLegDiv.innerHTML = `
-                            <div class="leg-info">First Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team1.name}</span>
+                        matchDiv.innerHTML = `
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>${homeTeam.name}</span>
                                 <span>vs</span>
-                                <span>${team2.name}</span>
-                            </div>
-                            <div class="leg-info">Second Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team2.name}</span>
-                                <span>vs</span>
-                                <span>${team1.name}</span>
+                                <span>${awayTeam.name}</span>
                             </div>
                         `;
                     }
                     
-                    matchDiv.appendChild(twoLegDiv);
                     roundDiv.appendChild(matchDiv);
                 });
                 
@@ -1911,64 +1542,37 @@
             if (championsLeague.knockout.semiFinals.length > 0) {
                 const roundDiv = document.createElement('div');
                 roundDiv.className = 'knockout-column';
-                roundDiv.innerHTML = '<h3 class="round-title">Semi-finals (Two Legs)</h3>';
+                roundDiv.innerHTML = '<h3 class="round-title">Semi-finals</h3>';
                 
-                championsLeague.knockout.semiFinals.forEach((match, i) => {
-                    const team1 = teams.find(t => t.id === match.leg1.homeTeam);
-                    const team2 = teams.find(t => t.id === match.leg1.awayTeam);
+                championsLeague.knockout.semiFinals.forEach(match => {
+                    const homeTeam = teams.find(t => t.id === match.homeTeam);
+                    const awayTeam = teams.find(t => t.id === match.awayTeam);
                     
-                    if (!team1 || !team2) return;
+                    if (!homeTeam || !awayTeam) return;
                     
                     const matchDiv = document.createElement('div');
                     matchDiv.className = 'knockout-match-card';
-                    matchDiv.innerHTML = `<h4 style="text-align: center; margin-bottom: 10px;">Match ${i + 1}</h4>`;
-                    
-                    const twoLegDiv = document.createElement('div');
-                    twoLegDiv.className = 'two-leg-match';
                     
                     if (match.completed) {
-                        const winner = match.aggregateWinner ? teams.find(t => t.id === match.aggregateWinner) : null;
-                        const loserId = match.aggregateWinner === team1.id ? team2.id : team1.id;
-                        const loser = teams.find(t => t.id === loserId);
-                        
-                        twoLegDiv.innerHTML = `
-                            <div class="leg-info">First Leg</div>
+                        const winner = match.winner ? teams.find(t => t.id === match.winner) : null;
+                        matchDiv.innerHTML = `
                             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team1.name}</span>
-                                <span>${match.leg1.homeScore} - ${match.leg1.awayScore}</span>
-                                <span>${team2.name}</span>
+                                <span>${homeTeam.name}</span>
+                                <span>${match.homeScore} - ${match.awayScore}</span>
+                                <span>${awayTeam.name}</span>
                             </div>
-                            <div class="leg-info">Second Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team2.name}</span>
-                                <span>${match.leg2.homeScore} - ${match.leg2.awayScore}</span>
-                                <span>${team1.name}</span>
-                            </div>
-                            <div class="aggregate-score">
-                                Aggregate: ${match.aggregateScore}
-                                ${match.penalties ? '<br><small>(Decided by penalties)</small>' : ''}
-                            </div>
-                            ${winner ? `<div class="winner-badge">Winner: ${winner.name}</div>` : ''}
-                            ${loser ? `<div style="margin-top: 5px; font-size: 0.9rem; color: var(--gray);">Loser: ${loser.name}</div>` : ''}
+                            ${winner ? `<div style="text-align: center; color: var(--gold); font-weight: bold;">Winner: ${winner.name}</div>` : ''}
                         `;
                     } else {
-                        twoLegDiv.innerHTML = `
-                            <div class="leg-info">First Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team1.name}</span>
+                        matchDiv.innerHTML = `
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>${homeTeam.name}</span>
                                 <span>vs</span>
-                                <span>${team2.name}</span>
-                            </div>
-                            <div class="leg-info">Second Leg</div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <span>${team2.name}</span>
-                                <span>vs</span>
-                                <span>${team1.name}</span>
+                                <span>${awayTeam.name}</span>
                             </div>
                         `;
                     }
                     
-                    matchDiv.appendChild(twoLegDiv);
                     roundDiv.appendChild(matchDiv);
                 });
                 
@@ -1979,7 +1583,7 @@
             if (championsLeague.knockout.final || championsLeague.knockout.thirdPlace) {
                 const finalsDiv = document.createElement('div');
                 finalsDiv.className = 'knockout-column';
-                finalsDiv.innerHTML = '<h3 class="round-title">Finals (Single Leg)</h3>';
+                finalsDiv.innerHTML = '<h3 class="round-title">Finals</h3>';
                 
                 // Third place
                 if (championsLeague.knockout.thirdPlace) {
@@ -1993,7 +1597,6 @@
                         
                         if (match.completed) {
                             const winner = match.winner ? teams.find(t => t.id === match.winner) : null;
-                            const loser = match.loser ? teams.find(t => t.id === match.loser) : null;
                             matchDiv.innerHTML = `
                                 <div style="text-align: center; margin-bottom: 5px; font-weight: bold;">Third Place Playoff</div>
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -2001,9 +1604,7 @@
                                     <span>${match.homeScore} - ${match.awayScore}</span>
                                     <span>${awayTeam.name}</span>
                                 </div>
-                                ${match.penalties ? '<div style="text-align: center; color: var(--gray); font-size: 0.9rem;">(Decided by penalties)</div>' : ''}
-                                ${winner ? `<div class="winner-badge" style="background: rgba(205, 127, 50, 0.2); color: var(--bronze);">Third Place: ${winner.name}</div>` : ''}
-                                ${loser ? `<div style="margin-top: 5px; font-size: 0.9rem; color: var(--gray);">Fourth Place: ${loser.name}</div>` : ''}
+                                ${winner ? `<div style="text-align: center; color: var(--bronze); font-weight: bold;">Third: ${winner.name}</div>` : ''}
                             `;
                         } else {
                             matchDiv.innerHTML = `
@@ -2033,7 +1634,6 @@
                         
                         if (match.completed) {
                             const winner = match.winner ? teams.find(t => t.id === match.winner) : null;
-                            const loser = match.loser ? teams.find(t => t.id === match.loser) : null;
                             matchDiv.innerHTML = `
                                 <div style="text-align: center; margin-bottom: 5px; font-weight: bold; color: var(--gold);">FINAL</div>
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -2041,9 +1641,7 @@
                                     <span>${match.homeScore} - ${match.awayScore}</span>
                                     <span>${awayTeam.name}</span>
                                 </div>
-                                ${match.penalties ? '<div style="text-align: center; color: var(--gray); font-size: 0.9rem;">(Decided by penalties)</div>' : ''}
-                                ${winner ? `<div class="winner-badge" style="background: rgba(212, 175, 55, 0.2); color: var(--gold); font-size: 1.1rem;">CHAMPION: ${winner.name}</div>` : ''}
-                                ${loser ? `<div style="margin-top: 5px; font-size: 0.9rem; color: var(--gray);">Runner-up: ${loser.name}</div>` : ''}
+                                ${winner ? `<div style="text-align: center; color: var(--gold); font-size: 1.2rem; font-weight: bold;">CHAMPION: ${winner.name}</div>` : ''}
                             `;
                         } else {
                             matchDiv.innerHTML = `
@@ -2066,7 +1664,7 @@
             knockoutStage.appendChild(bracket);
         }
         
-        // Results Panel with EDIT capability
+        // Results Panel
         function renderResultsPanel() {
             renderCurrentResults();
             renderMatchHistory();
@@ -2083,22 +1681,13 @@
             if (stage === 'group') {
                 fixtures = championsLeague.fixtures.filter(f => f.stage === 'group' && !f.completed);
             } else if (stage === 'round16') {
-                // Get incomplete legs from Round of 16
-                championsLeague.knockout.roundOf16.forEach(match => {
-                    if (!match.leg1.completed) fixtures.push(match.leg1);
-                    else if (!match.leg2.completed) fixtures.push(match.leg2);
-                });
+                fixtures = championsLeague.knockout.roundOf16.filter(f => !f.completed);
             } else if (stage === 'quarterfinals') {
-                championsLeague.knockout.quarterFinals.forEach(match => {
-                    if (!match.leg1.completed) fixtures.push(match.leg1);
-                    else if (!match.leg2.completed) fixtures.push(match.leg2);
-                });
+                fixtures = championsLeague.knockout.quarterFinals.filter(f => !f.completed);
             } else if (stage === 'semifinals') {
-                championsLeague.knockout.semiFinals.forEach(match => {
-                    if (!match.leg1.completed) fixtures.push(match.leg1);
-                    else if (!match.leg2.completed) fixtures.push(match.leg2);
-                });
+                fixtures = championsLeague.knockout.semiFinals.filter(f => !f.completed);
             } else if (stage === 'finals') {
+                fixtures = [];
                 if (championsLeague.knockout.final && !championsLeague.knockout.final.completed) {
                     fixtures.push(championsLeague.knockout.final);
                 }
@@ -2180,7 +1769,7 @@
                 return;
             }
             
-            completedFixtures.slice(-20).reverse().forEach(fixture => {
+            completedFixtures.slice(-10).reverse().forEach(fixture => {
                 const homeTeam = teams.find(t => t.id === fixture.homeTeam);
                 const awayTeam = teams.find(t => t.id === fixture.awayTeam);
                 
@@ -2189,15 +1778,12 @@
                 const pairingInfo = fixture.pairingInfo ? `<div style="font-size: 0.8rem; color: var(--gray);">${fixture.pairingInfo}</div>` : '';
                 
                 const historyCard = document.createElement('div');
-                historyCard.className = 'history-match';
+                historyCard.className = 'fixture-card';
                 historyCard.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                        <div>
-                            <span style="font-weight: bold;">${homeTeam.name}</span>
-                            <span class="vs">${fixture.homeScore} - ${fixture.awayScore}</span>
-                            <span style="font-weight: bold;">${awayTeam.name}</span>
-                        </div>
-                        <button class="edit-btn" data-fixture="${fixture.id}">Edit</button>
+                    <div class="match-teams">
+                        <span>${homeTeam.name}</span>
+                        <span class="vs">${fixture.homeScore} - ${fixture.awayScore}</span>
+                        <span>${awayTeam.name}</span>
                     </div>
                     <div style="color: var(--gray); font-size: 0.9rem;">
                         ${fixture.stage}${fixture.group ? ' • ' + fixture.group : ''}
@@ -2206,14 +1792,6 @@
                 `;
                 
                 matchHistoryList.appendChild(historyCard);
-            });
-            
-            // Add event listeners to edit buttons
-            document.querySelectorAll('.edit-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    const fixtureId = parseInt(this.getAttribute('data-fixture'));
-                    editResult(fixtureId);
-                });
             });
         }
         
@@ -2244,10 +1822,7 @@
                 setTimeout(() => {
                     // Simulate Round of 16
                     championsLeague.knockout.roundOf16.forEach(match => {
-                        if (!match.completed) {
-                            if (!match.leg1.completed) simulateMatch(match.leg1);
-                            if (!match.leg2.completed) simulateMatch(match.leg2);
-                        }
+                        if (!match.completed) simulateMatch(match);
                     });
                     
                     setTimeout(() => {
@@ -2258,10 +1833,7 @@
                         setTimeout(() => {
                             // Simulate Quarter-finals
                             championsLeague.knockout.quarterFinals.forEach(match => {
-                                if (!match.completed) {
-                                    if (!match.leg1.completed) simulateMatch(match.leg1);
-                                    if (!match.leg2.completed) simulateMatch(match.leg2);
-                                }
+                                if (!match.completed) simulateMatch(match);
                             });
                             
                             setTimeout(() => {
@@ -2272,10 +1844,7 @@
                                 setTimeout(() => {
                                     // Simulate Semi-finals
                                     championsLeague.knockout.semiFinals.forEach(match => {
-                                        if (!match.completed) {
-                                            if (!match.leg1.completed) simulateMatch(match.leg1);
-                                            if (!match.leg2.completed) simulateMatch(match.leg2);
-                                        }
+                                        if (!match.completed) simulateMatch(match);
                                     });
                                     
                                     setTimeout(() => {
