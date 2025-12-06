@@ -272,6 +272,12 @@
             font-weight: 600;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .notification.show {
+            opacity: 1;
         }
         
         .notification-success {
@@ -325,6 +331,13 @@
             margin-bottom: 15px;
             padding-bottom: 5px;
             border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+        }
+        
+        .match-pairing {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 5px;
+            font-style: italic;
         }
         
         @media (max-width: 768px) {
@@ -526,7 +539,7 @@
         </div>
     </div>
 
-    <div id="notification" class="notification hidden"></div>
+    <div id="notification" class="notification"></div>
 
     <script>
         // SIMPLE DATA STRUCTURE
@@ -534,7 +547,7 @@
         let championsLeague = {
             groups: [],
             knockout: {
-                roundOf16: [], // Simple array of match objects
+                roundOf16: [],
                 quarterFinals: [],
                 semiFinals: [],
                 thirdPlace: null,
@@ -613,10 +626,10 @@
         function showNotification(message, type = 'success') {
             notification.textContent = message;
             notification.className = `notification notification-${type}`;
-            notification.classList.remove('hidden');
+            notification.classList.add('show');
             
             setTimeout(() => {
-                notification.classList.add('hidden');
+                notification.classList.remove('show');
             }, 3000);
         }
         
@@ -778,7 +791,7 @@
                 final: null
             };
             
-            // Shuffle and create 4 groups
+            // Shuffle teams and create 4 groups
             const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
             
             for (let i = 0; i < 4; i++) {
@@ -1076,13 +1089,16 @@
             }
         }
         
-        // Knockout Stage
+        // KNOCKOUT STAGE - WITH PROPER GROUP WINNER VS RUNNER-UP PAIRING
         generateRoundOf16Btn.addEventListener('click', generateRoundOf16);
         
         function generateRoundOf16() {
-            const qualifiedTeams = [];
+            console.log("Generating Round of 16...");
             
-            // Get top 2 from each group
+            // Get qualified teams from each group
+            const groupWinners = [];
+            const groupRunnersUp = [];
+            
             championsLeague.groups.forEach(group => {
                 const sorted = [...group.teams].sort((a, b) => {
                     if (b.points !== a.points) return b.points - a.points;
@@ -1090,46 +1106,83 @@
                     return b.goalsFor - a.goalsFor;
                 });
                 
-                qualifiedTeams.push({
+                console.log(`${group.name} Winner: ${sorted[0].name}, Runner-up: ${sorted[1].name}`);
+                
+                groupWinners.push({
                     team: sorted[0],
-                    position: 1,
                     group: group.name
-                }, {
+                });
+                
+                groupRunnersUp.push({
                     team: sorted[1],
-                    position: 2,
                     group: group.name
                 });
             });
             
-            // Group winners vs runners-up (simple pairing)
-            const winners = qualifiedTeams.filter(t => t.position === 1);
-            const runnersUp = qualifiedTeams.filter(t => t.position === 2);
+            console.log("Group Winners:", groupWinners.map(w => `${w.team.name} (${w.group})`));
+            console.log("Group Runners-up:", groupRunnersUp.map(r => `${r.team.name} (${r.group})`));
             
+            // Shuffle runners-up for random draw
+            const shuffledRunnersUp = [...groupRunnersUp].sort(() => Math.random() - 0.5);
+            
+            // Create matches: winner vs runner-up from DIFFERENT group
             championsLeague.knockout.roundOf16 = [];
+            const usedGroups = new Set();
             
-            for (let i = 0; i < 8; i++) {
-                const match = {
-                    id: championsLeague.fixtures.length + 1,
-                    homeTeam: winners[i].team.id,
-                    awayTeam: runnersUp[i].team.id,
-                    matchday: 7,
-                    homeScore: null,
-                    awayScore: null,
-                    completed: false,
-                    stage: 'Round of 16',
-                    winner: null,
-                    loser: null
-                };
+            for (let i = 0; i < groupWinners.length; i++) {
+                const winner = groupWinners[i];
                 
-                championsLeague.knockout.roundOf16.push(match);
-                championsLeague.fixtures.push(match);
+                // Find a runner-up from a different group
+                let runnerUpIndex = -1;
+                for (let j = 0; j < shuffledRunnersUp.length; j++) {
+                    if (shuffledRunnersUp[j].group !== winner.group && !usedGroups.has(shuffledRunnersUp[j].group)) {
+                        runnerUpIndex = j;
+                        usedGroups.add(shuffledRunnersUp[j].group);
+                        break;
+                    }
+                }
+                
+                // If no suitable runner-up found (shouldn't happen), take any
+                if (runnerUpIndex === -1) {
+                    for (let j = 0; j < shuffledRunnersUp.length; j++) {
+                        if (!usedGroups.has(shuffledRunnersUp[j].group)) {
+                            runnerUpIndex = j;
+                            usedGroups.add(shuffledRunnersUp[j].group);
+                            break;
+                        }
+                    }
+                }
+                
+                if (runnerUpIndex !== -1) {
+                    const runnerUp = shuffledRunnersUp[runnerUpIndex];
+                    
+                    const match = {
+                        id: championsLeague.fixtures.length + 1,
+                        homeTeam: winner.team.id,
+                        awayTeam: runnerUp.team.id,
+                        matchday: 7,
+                        homeScore: null,
+                        awayScore: null,
+                        completed: false,
+                        stage: 'Round of 16',
+                        winner: null,
+                        loser: null,
+                        pairingInfo: `${winner.group} Winner vs ${runnerUp.group} Runner-up`
+                    };
+                    
+                    championsLeague.knockout.roundOf16.push(match);
+                    championsLeague.fixtures.push(match);
+                    console.log(`Match ${i+1}: ${winner.team.name} (${winner.group} Winner) vs ${runnerUp.team.name} (${runnerUp.group} Runner-up)`);
+                }
             }
+            
+            console.log("Round of 16 matches created:", championsLeague.knockout.roundOf16.length);
             
             saveData();
             renderChampionsLeagueKnockout();
             renderResultsPanel();
             updateKnockoutStageStatus();
-            showNotification('Round of 16 generated!', 'success');
+            showNotification('Round of 16 generated! Winners vs Runners-up from different groups.', 'success');
             switchTab('knockout');
         }
         
@@ -1138,7 +1191,10 @@
         function generateQuarterFinals() {
             const winners = championsLeague.knockout.roundOf16
                 .filter(m => m.winner)
-                .map(m => teams.find(t => t.id === m.winner))
+                .map(m => {
+                    const team = teams.find(t => t.id === m.winner);
+                    return team ? { team: team, fromMatch: m.id } : null;
+                })
                 .filter(Boolean);
             
             if (winners.length !== 8) {
@@ -1146,16 +1202,16 @@
                 return;
             }
             
-            // Shuffle for random draw
-            const shuffled = [...winners].sort(() => Math.random() - 0.5);
+            // Shuffle winners for random draw
+            const shuffledWinners = [...winners].sort(() => Math.random() - 0.5);
             
             championsLeague.knockout.quarterFinals = [];
             
             for (let i = 0; i < 4; i++) {
                 const match = {
                     id: championsLeague.fixtures.length + 1,
-                    homeTeam: shuffled[i * 2].id,
-                    awayTeam: shuffled[i * 2 + 1].id,
+                    homeTeam: shuffledWinners[i * 2].team.id,
+                    awayTeam: shuffledWinners[i * 2 + 1].team.id,
                     matchday: 8,
                     homeScore: null,
                     awayScore: null,
@@ -1421,7 +1477,8 @@
                                 <span>${match.homeScore} - ${match.awayScore}</span>
                                 <span>${awayTeam.name}</span>
                             </div>
-                            ${winner ? `<div style="text-align: center; color: var(--gold); font-weight: bold;">Winner: ${winner.name}</div>` : ''}
+                            <div class="match-pairing">${match.pairingInfo || 'Group Winner vs Runner-up'}</div>
+                            ${winner ? `<div style="text-align: center; color: var(--gold); font-weight: bold; margin-top: 5px;">Winner: ${winner.name}</div>` : ''}
                         `;
                     } else {
                         matchDiv.innerHTML = `
@@ -1430,6 +1487,7 @@
                                 <span>vs</span>
                                 <span>${awayTeam.name}</span>
                             </div>
+                            <div class="match-pairing">${match.pairingInfo || 'Group Winner vs Runner-up'}</div>
                         `;
                     }
                     
@@ -1658,12 +1716,15 @@
                 const resultCard = document.createElement('div');
                 resultCard.className = 'fixture-card';
                 
+                const pairingInfo = fixture.pairingInfo ? `<div style="font-size: 0.9rem; color: var(--gray); margin-top: 5px;">${fixture.pairingInfo}</div>` : '';
+                
                 resultCard.innerHTML = `
                     <div class="match-teams">
                         <span>${homeTeam.name}</span>
                         <span class="vs">vs</span>
                         <span>${awayTeam.name}</span>
                     </div>
+                    ${pairingInfo}
                     <div class="result-input">
                         <input type="number" min="0" id="home-score-${fixture.id}" placeholder="0">
                         <span>-</span>
@@ -1714,6 +1775,8 @@
                 
                 if (!homeTeam || !awayTeam) return;
                 
+                const pairingInfo = fixture.pairingInfo ? `<div style="font-size: 0.8rem; color: var(--gray);">${fixture.pairingInfo}</div>` : '';
+                
                 const historyCard = document.createElement('div');
                 historyCard.className = 'fixture-card';
                 historyCard.innerHTML = `
@@ -1725,6 +1788,7 @@
                     <div style="color: var(--gray); font-size: 0.9rem;">
                         ${fixture.stage}${fixture.group ? ' • ' + fixture.group : ''}
                     </div>
+                    ${pairingInfo}
                 `;
                 
                 matchHistoryList.appendChild(historyCard);
